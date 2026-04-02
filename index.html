@@ -36,9 +36,6 @@
 @media(min-width:900px){.hero-banner{padding:0 3.5rem 5rem;padding-top:0;min-height:100vh;}.continue-section{padding:2.5rem 3.5rem 0;}}
 @media(min-width:1200px){.hero-banner{padding:0 4rem 5rem;}.continue-section{padding:2.5rem 4rem 0;}}
 </style>
-  <!-- Video.js v8 — CDN officiel vjs.zencdn.net -->
-  <link rel="stylesheet" href="https://vjs.zencdn.net/8.23.3/video-js.min.css">
-  <script src="https://vjs.zencdn.net/8.23.3/video.min.js"></script>
 </head>
 <body>
 
@@ -208,7 +205,7 @@ function renderContinue() {
 // ── PLAY — delegates to player.js ──
 function openPlayer(url, r, html){buildPlayer(url,r);document.getElementById('player-info').innerHTML=html;document.getElementById('player-overlay').classList.add('open');}
 
-function closePlayer(){stopAutoSave();document.getElementById('player-overlay').classList.remove('open');playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
+function closePlayer(){stopAutoSave();document.getElementById('player-overlay').classList.remove('open');document.getElementById('player-wrap').innerHTML='';vidEl=null;currentPlayCtx=null;renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
 function updateProg(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);}
 function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
 function skip(s){if(vidEl)vidEl.currentTime+=s;}
@@ -270,7 +267,7 @@ function switchEp(epId){
 }
 
 function startAutoSave(id,isFilm){stopAutoSave();saveTimer=setInterval(function(){if(vidEl&&!isNaN(vidEl.duration)&&vidEl.duration>0&&currentUser)saveProgress(currentUser.id,id,isFilm,vidEl.currentTime,vidEl.duration);},5000);}
-function stopAutoSave(){if(saveTimer){clearInterval(saveTimer);saveTimer=null;}if(_vjsPlayer&&currentPlayCtx&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,currentPlayCtx.type==='film',playerCurrentTime(),playerDuration());}
+function stopAutoSave(){if(saveTimer){clearInterval(saveTimer);saveTimer=null;}if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&vidEl.duration>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,currentPlayCtx.type==='film',vidEl.currentTime,vidEl.duration);}
 
 // Gate
 var gbuf='',GLEN=4;

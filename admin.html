@@ -52,23 +52,16 @@
 <!-- ── ADMIN PANEL ── -->
 <div id="admin-screen">
   <div class="admin-topbar">
-    <div style="display:flex;align-items:center;gap:.8rem;">
-      <button class="admin-ham" id="admin-ham" onclick="toggleAdminDrawer()" aria-label="Menu">
-        <span></span><span></span><span></span>
-      </button>
-      <a class="logo" href="index.html">NOVA<span>CINÉ</span></a>
-    </div>
+    <a class="logo" href="index.html">NOVA<span>CINÉ</span></a>
     <span style="font-size:.85rem;color:var(--accent);font-weight:600;letter-spacing:.1em;">ADMIN</span>
     <button onclick="window.location.href='index.html'" style="background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.3);color:#e74c3c;padding:.4rem 1rem;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.82rem;touch-action:manipulation;">← Quitter</button>
   </div>
-
-  <!-- Drawer mobile admin -->
-  <div class="admin-drawer" id="admin-drawer">
-    <button class="admin-drawer-btn active" data-s="dashboard" onclick="showSec('dashboard');closeAdminDrawer()">📊 Tableau de bord</button>
-    <button class="admin-drawer-btn" data-s="films" onclick="showSec('films');closeAdminDrawer()">🎬 Films</button>
-    <button class="admin-drawer-btn" data-s="series" onclick="showSec('series');closeAdminDrawer()">📺 Séries</button>
-    <button class="admin-drawer-btn" data-s="config" onclick="showSec('config');closeAdminDrawer()">⚙️ Configuration</button>
-    <button onclick="window.location.href='index.html'" style="margin-top:auto;background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.25);color:#e74c3c;padding:.7rem;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.9rem;touch-action:manipulation;">← Quitter l'admin</button>
+  <!-- Mobile tabs -->
+  <div class="admin-tabs" id="admin-tabs">
+    <button class="admin-tab active" data-s="dashboard" onclick="showSec('dashboard')">📊 Dashboard</button>
+    <button class="admin-tab" data-s="films" onclick="showSec('films')">🎬 Films</button>
+    <button class="admin-tab" data-s="series" onclick="showSec('series')">📺 Séries</button>
+    <button class="admin-tab" data-s="config" onclick="showSec('config')">⚙️ Config</button>
   </div>
   <div class="admin-layout">
     <aside class="admin-sidebar">
@@ -222,38 +215,10 @@ function showSec(n) {
   document.querySelectorAll('.asec').forEach(function(x){ x.classList.remove('active'); });
   document.querySelectorAll('.sbtn').forEach(function(x){ x.classList.remove('active'); });
   document.querySelectorAll('.admin-tab').forEach(function(x){ x.classList.remove('active'); });
-  document.querySelectorAll('.admin-drawer-btn').forEach(function(x){ x.classList.remove('active'); });
   document.getElementById('asec-'+n).classList.add('active');
   var sb=document.querySelector('.sbtn[data-s="'+n+'"]'); if(sb) sb.classList.add('active');
   var tb=document.querySelector('.admin-tab[data-s="'+n+'"]'); if(tb) tb.classList.add('active');
-  var db=document.querySelector('.admin-drawer-btn[data-s="'+n+'"]'); if(db) db.classList.add('active');
 }
-// ── ADMIN HAMBURGER ──
-function toggleAdminDrawer() {
-  var drawer = document.getElementById('admin-drawer');
-  var ham = document.getElementById('admin-ham');
-  var open = drawer.classList.toggle('open');
-  ham.classList.toggle('open', open);
-  document.body.style.overflow = open ? 'hidden' : '';
-}
-function closeAdminDrawer() {
-  var drawer = document.getElementById('admin-drawer');
-  var ham = document.getElementById('admin-ham');
-  drawer.classList.remove('open');
-  ham.classList.remove('open');
-  document.body.style.overflow = '';
-}
-// Close drawer on outside tap
-document.addEventListener('click', function(e) {
-  var drawer = document.getElementById('admin-drawer');
-  var ham = document.getElementById('admin-ham');
-  if (drawer && drawer.classList.contains('open')) {
-    if (!drawer.contains(e.target) && ham && !ham.contains(e.target)) {
-      closeAdminDrawer();
-    }
-  }
-});
-
 async function loadAdminData() {
   await loadFilms(); await loadSeries();
   renderAFilms(); renderASeries();
