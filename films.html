@@ -15,6 +15,9 @@
 @media(min-width:900px){.page-wrap{padding:calc(var(--nav-h) + 2.5rem) 3.5rem 3rem;}.page-wrap h1{font-size:2.5rem;}}
 @media(min-width:1200px){.page-wrap{padding:calc(var(--nav-h) + 2.5rem) 4rem 3rem;}}
 </style>
+  <!-- Video.js -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/video.js@8/dist/video-js.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/video.js@8/dist/video.min.js"></script>
 </head>
 <body>
 <nav>
@@ -103,8 +106,8 @@ function playFilm(id){
 }
 function closePlayer(){
   if(saveTimer){clearInterval(saveTimer);saveTimer=null;}
-  if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&vidEl.duration>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,vidEl.currentTime,vidEl.duration);
-  document.getElementById('player-overlay').classList.remove('open');document.getElementById('player-wrap').innerHTML='';vidEl=null;currentPlayCtx=null;
+  if(_vjsPlayer&&currentPlayCtx&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());
+  document.getElementById('player-overlay').classList.remove('open');playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;
   renderFilms(activeGenre==='Tous'?films:films.filter(function(f){return f.genre===activeGenre;}));
 }
 function togglePlay(){playerTogglePlay();}
@@ -115,7 +118,7 @@ function toggleFS(){playerToggleFS();}
 // seekV → player.js
 document.getElementById('player-overlay').addEventListener('click',function(e){if(e.target===this)closePlayer();});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();playerKeydown(e);});
-window.addEventListener('beforeunload',function(){if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,vidEl.currentTime,vidEl.duration);});
+window.addEventListener('beforeunload',function(){if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());});
 </script>
 </body>
 </html>

@@ -518,3 +518,280 @@ nav {
   .section{padding:2.5rem 4rem;}
   .cards-row{grid-template-columns:repeat(auto-fill,minmax(175px,1fr));}
 }
+
+/* ══════════════════════════════════════════
+   VIDEO.JS — Thème NovaCiné
+   Surcharge des variables et composants VJS
+══════════════════════════════════════════ */
+
+/* Importer le CSS Video.js de base depuis CDN */
+@import url('https://cdn.jsdelivr.net/npm/video.js@8/dist/video-js.min.css');
+
+/* ── Conteneur ── */
+.vjs-novacine,
+.video-js.vjs-novacine {
+  width: 100% !important;
+  height: 100% !important;
+  background: #000;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: #dce8f7;
+  border-radius: 0;
+}
+
+/* Bouton play central */
+.vjs-novacine .vjs-big-play-button {
+  background: rgba(232,160,32,.92) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  width: 68px !important;
+  height: 68px !important;
+  line-height: 68px !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+  transition: transform .2s, background .2s !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,.5) !important;
+}
+.vjs-novacine .vjs-big-play-button:hover {
+  background: #e8a020 !important;
+  transform: translate(-50%, -50%) scale(1.1) !important;
+}
+.vjs-novacine .vjs-big-play-button .vjs-icon-placeholder::before {
+  font-size: 2rem !important;
+  color: #000 !important;
+  line-height: 68px !important;
+}
+/* Masquer le bouton play si lecture en cours */
+.vjs-novacine.vjs-playing .vjs-big-play-button {
+  display: none !important;
+}
+
+/* ── Barre de contrôle ── */
+.vjs-novacine .vjs-control-bar {
+  background: linear-gradient(to top, rgba(0,0,0,.92) 0%, rgba(0,0,0,.0) 100%) !important;
+  height: 48px !important;
+  padding: 0 .5rem !important;
+  align-items: center !important;
+  display: flex !important;
+  opacity: 0 !important;
+  transition: opacity .3s !important;
+}
+.vjs-novacine:hover .vjs-control-bar,
+.vjs-novacine.vjs-user-active .vjs-control-bar,
+.vjs-novacine.vjs-paused .vjs-control-bar {
+  opacity: 1 !important;
+}
+/* Masquer en fullscreen idle */
+.vjs-novacine.vjs-user-inactive.vjs-playing .vjs-control-bar {
+  opacity: 0 !important;
+  transition: opacity 1s !important;
+}
+.vjs-novacine.vjs-user-inactive.vjs-playing {
+  cursor: none !important;
+}
+
+/* ── Barre de progression ── */
+.vjs-novacine .vjs-progress-control {
+  flex: 1 !important;
+  height: 100% !important;
+  align-items: center !important;
+}
+.vjs-novacine .vjs-progress-holder {
+  height: 4px !important;
+  background: rgba(255,255,255,.2) !important;
+  border-radius: 2px !important;
+  transition: height .15s !important;
+  margin: 0 !important;
+}
+.vjs-novacine .vjs-progress-control:hover .vjs-progress-holder,
+.vjs-novacine .vjs-progress-holder:active {
+  height: 7px !important;
+}
+/* Remplissage accent */
+.vjs-novacine .vjs-play-progress {
+  background: var(--accent) !important;
+  border-radius: 2px !important;
+}
+.vjs-novacine .vjs-play-progress::before {
+  /* Pastille thumb */
+  color: var(--accent) !important;
+  font-size: 1.1em !important;
+  top: -0.35em !important;
+  transition: transform .15s !important;
+}
+.vjs-novacine .vjs-progress-holder:hover .vjs-play-progress::before,
+.vjs-novacine .vjs-progress-holder:active .vjs-play-progress::before {
+  transform: scale(1.4) !important;
+}
+/* Buffer */
+.vjs-novacine .vjs-load-progress,
+.vjs-novacine .vjs-load-progress div {
+  background: rgba(255,255,255,.15) !important;
+  border-radius: 2px !important;
+}
+/* Masquer le tooltip temps par défaut */
+.vjs-novacine .vjs-mouse-display { display: none !important; }
+/* Tooltip custom survol */
+.vjs-novacine .vjs-time-tooltip {
+  background: rgba(8,12,20,.9) !important;
+  color: var(--accent) !important;
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: .75rem !important;
+  font-weight: 600 !important;
+  border-radius: 5px !important;
+  padding: 3px 8px !important;
+  border: 1px solid rgba(232,160,32,.3) !important;
+}
+
+/* ── Boutons de contrôle ── */
+.vjs-novacine .vjs-button > .vjs-icon-placeholder::before {
+  font-size: 1.4em !important;
+  line-height: 48px !important;
+  color: rgba(255,255,255,.85) !important;
+  transition: color .15s !important;
+}
+.vjs-novacine .vjs-button:hover > .vjs-icon-placeholder::before {
+  color: var(--accent) !important;
+}
+/* Play/Pause */
+.vjs-novacine .vjs-play-control {
+  order: 1 !important;
+  min-width: 38px !important;
+}
+/* Volume */
+.vjs-novacine .vjs-volume-panel {
+  order: 2 !important;
+}
+.vjs-novacine .vjs-volume-bar.vjs-slider-bar {
+  background: rgba(255,255,255,.2) !important;
+}
+.vjs-novacine .vjs-volume-level {
+  background: var(--accent) !important;
+}
+.vjs-novacine .vjs-volume-level::before {
+  color: var(--accent) !important;
+}
+/* Temps */
+.vjs-novacine .vjs-current-time,
+.vjs-novacine .vjs-duration,
+.vjs-novacine .vjs-time-divider {
+  font-size: .75rem !important;
+  color: rgba(255,255,255,.65) !important;
+  line-height: 48px !important;
+  min-width: auto !important;
+  padding: 0 3px !important;
+}
+.vjs-novacine .vjs-remaining-time { display: none !important; }
+
+/* Vitesse de lecture */
+.vjs-novacine .vjs-playback-rate .vjs-playback-rate-value {
+  font-size: .75rem !important;
+  line-height: 48px !important;
+  color: rgba(255,255,255,.65) !important;
+}
+.vjs-novacine .vjs-menu-button-popup .vjs-menu .vjs-menu-content {
+  background: rgba(8,12,20,.95) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  bottom: 48px !important;
+  padding: .3rem 0 !important;
+}
+.vjs-novacine .vjs-menu li.vjs-menu-item {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: .82rem !important;
+  color: var(--muted) !important;
+  padding: .5rem 1rem !important;
+  transition: background .15s, color .15s !important;
+}
+.vjs-novacine .vjs-menu li.vjs-menu-item:hover {
+  background: rgba(232,160,32,.1) !important;
+  color: var(--accent) !important;
+}
+.vjs-novacine .vjs-menu li.vjs-selected,
+.vjs-novacine .vjs-menu li.vjs-menu-item:focus {
+  background: rgba(232,160,32,.15) !important;
+  color: var(--accent) !important;
+}
+
+/* Plein écran */
+.vjs-novacine .vjs-fullscreen-control { order: 99 !important; }
+
+/* ── Spinner de chargement ── */
+.vjs-novacine .vjs-loading-spinner {
+  border-color: rgba(232,160,32,.2) !important;
+  border-top-color: var(--accent) !important;
+}
+.vjs-novacine .vjs-loading-spinner::before,
+.vjs-novacine .vjs-loading-spinner::after {
+  border-color: transparent !important;
+  border-top-color: rgba(232,160,32,.4) !important;
+}
+
+/* ── Masquer éléments inutiles ── */
+.vjs-novacine .vjs-picture-in-picture-control { display: none !important; }
+.vjs-novacine .vjs-chapters-button { display: none !important; }
+.vjs-novacine .vjs-descriptions-button { display: none !important; }
+.vjs-novacine .vjs-subs-caps-button { display: none !important; }
+.vjs-novacine .vjs-audio-button { display: none !important; }
+
+/* ── Mobile : contrôles plus grands ── */
+@media (max-width: 640px) {
+  .vjs-novacine .vjs-control-bar { height: 44px !important; }
+  .vjs-novacine .vjs-button > .vjs-icon-placeholder::before { line-height: 44px !important; font-size: 1.3em !important; }
+  .vjs-novacine .vjs-current-time,
+  .vjs-novacine .vjs-duration,
+  .vjs-novacine .vjs-time-divider { line-height: 44px !important; font-size: .68rem !important; }
+  .vjs-novacine .vjs-big-play-button { width: 58px !important; height: 58px !important; line-height: 58px !important; }
+  .vjs-novacine .vjs-big-play-button .vjs-icon-placeholder::before { line-height: 58px !important; font-size: 1.7rem !important; }
+}
+
+/* ══════════════════════════════════════════
+   ADMIN HAMBURGER MOBILE
+══════════════════════════════════════════ */
+.admin-ham {
+  display: none; /* visible seulement en CSS < 900px */
+  width: 36px; height: 36px; background: none; border: none;
+  cursor: pointer; flex-direction: column; justify-content: center; gap: 5px; padding: 5px;
+  flex-shrink: 0;
+}
+.admin-ham span {
+  display: block; height: 2px; background: var(--text); border-radius: 2px; transition: all .25s;
+}
+.admin-ham.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.admin-ham.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.admin-ham.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Drawer mobile admin */
+.admin-drawer {
+  display: none;
+  position: fixed; top: var(--nav-h); left: 0; right: 0; bottom: 0; z-index: 198;
+  background: rgba(8,12,20,.98);
+  flex-direction: column; padding: 1.5rem;
+  overflow-y: auto;
+  animation: drawerIn .25s cubic-bezier(.16,1,.3,1);
+}
+.admin-drawer.open { display: flex; }
+@keyframes drawerIn { from { opacity:0; transform: translateX(-16px); } to { opacity:1; transform: none; } }
+.admin-drawer-btn {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 1rem 0; border-bottom: 1px solid var(--border);
+  background: none; border-left: none; border-right: none; border-top: none;
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 1.1rem;
+  cursor: pointer; text-align: left; transition: color .15s;
+  touch-action: manipulation;
+}
+.admin-drawer-btn:last-child { border-bottom: none; }
+.admin-drawer-btn.active { color: var(--accent); }
+.admin-drawer-btn:hover { color: var(--accent); }
+
+@media (max-width: 899px) {
+  .admin-ham { display: flex; }
+  .admin-tabs { display: none !important; }
+  /* Cacher la sidebar desktop */
+  .admin-sidebar { display: none !important; }
+}
+@media (min-width: 900px) {
+  .admin-drawer { display: none !important; }
+}
