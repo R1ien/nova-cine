@@ -524,8 +524,6 @@ nav {
    Surcharge des variables et composants VJS
 ══════════════════════════════════════════ */
 
-/* Importer le CSS Video.js de base depuis CDN */
-@import url('https://cdn.jsdelivr.net/npm/video.js@8/dist/video-js.min.css');
 
 /* ── Conteneur ── */
 .vjs-novacine,
