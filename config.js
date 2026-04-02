@@ -18,8 +18,8 @@ function initSupabaseClient() {
   if (
     SUPABASE_URL &&
     SUPABASE_ANON_KEY &&
-    SUPABASE_URL !== "https://qldyrajeoqkibqybmchr.supabase.co" &&
-    SUPABASE_ANON_KEY !== "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsZHlyYWplb3FraWJxeWJtY2hyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTA3MTkwNCwiZXhwIjoyMDkwNjQ3OTA0fQ.Q4eZjvQh7hTMCvXb3k6-Xa7gWRSdljTgi3LU_eLE6ws"
+   SUPABASE_URL !== "https://VOTRE_PROJET.supabase.co" &&
+    SUPABASE_ANON_KEY !== "VOTRE_CLE_ANON_ICI"
   ) {
     try {
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
