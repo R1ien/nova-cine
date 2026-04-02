@@ -60,7 +60,7 @@
 <div class="notif" id="notif"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script><script src="js/app.js"></script><script src="js/nav.js"></script>
+<script src="config.js"></script><script src="js/app.js"></script><script src="js/player.js"></script><script src="js/nav.js"></script>
 <script>
 var currentUser=null,vidEl=null,currentPlayCtx=null,saveTimer=null,activeGenre='Tous';
 (async function(){
@@ -91,19 +91,8 @@ function makeCard(s){
     +'<button class="card-play">▶</button>'+bar+'</div>';
 }
 function videoType(u){var e=u.split('.').pop().split('?')[0].toLowerCase();return({mp4:'video/mp4',mkv:'video/x-matroska',mov:'video/quicktime',avi:'video/x-msvideo',webm:'video/webm',ogv:'video/ogg',m4v:'video/mp4',flv:'video/x-flv'})[e]||'video/mp4';}
-function buildPlayer(url,r){
-  var wrap=document.getElementById('player-wrap');wrap.innerHTML='';vidEl=null;r=r||0;
-  if(/youtube\.com|youtu\.be/.test(url)){var id=(url.match(/(?:v=|youtu\.be\/)([^&?]+)/)||[])[1];if(id)wrap.innerHTML='<iframe src="https://www.youtube.com/embed/'+id+'?autoplay=1&start='+Math.floor(r)+'" allow="autoplay;fullscreen" allowfullscreen></iframe>';}
-  else if(/vimeo\.com/.test(url)){var id=(url.match(/vimeo\.com\/(\d+)/)||[])[1];if(id)wrap.innerHTML='<iframe src="https://player.vimeo.com/video/'+id+'?autoplay=1#t='+Math.floor(r)+'s" allow="autoplay;fullscreen" allowfullscreen></iframe>';}
-  else{wrap.innerHTML='<video id="vid" preload="none" playsinline><source src="'+url+'" type="'+videoType(url)+'"></video><div class="vctrls"><div class="pbar" id="pbar" onclick="seekV(event)"><div class="pfill" id="pfill" style="width:0%"></div></div><div class="crow"><button class="cbtn" onclick="togglePlay()"><span id="pico">▶</span></button><button class="cbtn" onclick="skip(-10)">-10s</button><button class="cbtn" onclick="skip(10)">+10s</button><input type="range" class="vslider" id="vslider" min="0" max="1" step="0.05" value="1" oninput="setVol(this.value)"><span class="tdisp" id="tdisp">0:00 / 0:00</span><div class="cr"><button class="cbtn" onclick="toggleMute()">🔊</button><button class="cbtn" onclick="toggleFS()">⛶</button></div></div></div>';
-  vidEl=document.getElementById('vid');
-  vidEl.addEventListener('timeupdate',function(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);});
-  vidEl.addEventListener('loadedmetadata',function(){if(r>0)vidEl.currentTime=r;});
-  vidEl.addEventListener('play',function(){var e=document.getElementById('pico');if(e)e.textContent='⏸';});
-  vidEl.addEventListener('pause',function(){var e=document.getElementById('pico');if(e)e.textContent='▶';});
-  vidEl.play().catch(function(){});}
-  initPlayerTouchControls();
-}
+// buildPlayer → player.js
+
 function startSave(id){if(saveTimer)clearInterval(saveTimer);if(!currentUser)return;saveTimer=setInterval(function(){if(vidEl&&!isNaN(vidEl.duration)&&vidEl.duration>0)saveProgress(currentUser.id,id,false,vidEl.currentTime,vidEl.duration);},5000);}
 function stopSave(id){if(saveTimer){clearInterval(saveTimer);saveTimer=null;}if(id&&vidEl&&!isNaN(vidEl.duration)&&vidEl.duration>0&&currentUser)saveProgress(currentUser.id,id,false,vidEl.currentTime,vidEl.duration);}
 function buildInfo(s,eps,activeId){
@@ -132,14 +121,14 @@ function switchEp(epId){
   if(s)document.getElementById('player-info').innerHTML=buildInfo(s,eps,epId);startSave(epId);
 }
 function closePlayer(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);document.getElementById('player-overlay').classList.remove('open');document.getElementById('player-wrap').innerHTML='';vidEl=null;currentPlayCtx=null;renderList(activeGenre==='Tous'?series:series.filter(function(s){return s.genre===activeGenre;}));}
-function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
-function skip(s){if(vidEl)vidEl.currentTime+=s;}
-function setVol(v){if(vidEl){vidEl.volume=parseFloat(v);vidEl.muted=v==0;}}
-function toggleMute(){if(vidEl){vidEl.muted=!vidEl.muted;var sl=document.getElementById('vslider');if(sl)sl.value=vidEl.muted?0:vidEl.volume;}}
-function toggleFS(){var w=document.getElementById('player-wrap');if(!document.fullscreenElement){if(w.requestFullscreen)w.requestFullscreen();}else{if(document.exitFullscreen)document.exitFullscreen();}}
-function seekV(e){var b=document.getElementById('pbar');if(!vidEl||!b)return;var r=b.getBoundingClientRect();vidEl.currentTime=((e.clientX-r.left)/r.width)*vidEl.duration;}
+function togglePlay(){playerTogglePlay();}
+function skip(s){playerSkip(s);}
+function setVol(v){playerSetVol(v);}
+function toggleMute(){playerToggleMute();}
+function toggleFS(){playerToggleFS();}
+// seekV → player.js
 document.getElementById('player-overlay').addEventListener('click',function(e){if(e.target===this)closePlayer();});
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();if(e.key===' '&&vidEl&&document.activeElement.tagName!=='INPUT'){e.preventDefault();togglePlay();}if(e.key==='ArrowLeft'&&vidEl)skip(-10);if(e.key==='ArrowRight'&&vidEl)skip(10);});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();playerKeydown(e);});
 window.addEventListener('beforeunload',function(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);});
 </script>
 </body>

@@ -254,13 +254,44 @@ nav {
 }
 .player-wrap:hover .vctrls,.player-wrap.show-ctrl .vctrls{opacity:1;}
 .pbar{
-  position:relative;height:4px;background:rgba(255,255,255,.2);
-  border-radius:2px;cursor:pointer;
-  /* Bigger tap target */
-  padding:8px 0;margin:-8px 0;
+  position:relative;height:20px;
+  display:flex;align-items:center;
+  cursor:pointer;user-select:none;-webkit-user-select:none;
 }
-.pbar::after{content:'';position:absolute;inset:8px 0;background:rgba(255,255,255,.2);border-radius:2px;}
-.pfill{position:absolute;top:8px;left:0;height:4px;background:var(--accent);border-radius:2px;pointer-events:none;}
+.pbar-track{
+  position:relative;width:100%;height:4px;
+  background:rgba(255,255,255,.25);border-radius:2px;
+  transition:height .15s;overflow:hidden;
+}
+.pbar:hover .pbar-track,.pbar.dragging .pbar-track{height:6px;}
+.pfill{
+  position:absolute;top:0;left:0;height:100%;
+  background:var(--accent);border-radius:2px;pointer-events:none;
+  transition:width .05s linear;
+}
+.pthumb{
+  position:absolute;top:50%;right:-6px;
+  width:12px;height:12px;border-radius:50%;
+  background:var(--accent);border:2px solid #fff;
+  transform:translateY(-50%) scale(0);
+  transition:transform .15s;pointer-events:none;
+  box-shadow:0 0 4px rgba(0,0,0,.5);
+}
+.pbar:hover .pthumb,.pbar.dragging .pthumb{transform:translateY(-50%) scale(1);}
+/* Fullscreen idle = hide controls + cursor */
+.player-wrap.fs-idle .vctrls { opacity: 0 !important; }
+
+/* Fix thumb: use left instead of right for accurate positioning */
+.pthumb {
+  position: absolute; top: 50%; left: 0;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--accent); border: 2px solid #fff;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform .15s; pointer-events: none;
+  box-shadow: 0 0 5px rgba(0,0,0,.6);
+  margin-left: 0;
+}
+.pbar:hover .pthumb, .pbar.dragging .pthumb { transform: translate(-50%, -50%) scale(1); }
 .crow{display:flex;align-items:center;gap:.5rem;}
 .cbtn{background:none;border:none;color:#fff;cursor:pointer;padding:4px;display:flex;align-items:center;border-radius:4px;transition:color .15s;min-width:32px;min-height:32px;justify-content:center;touch-action:manipulation;}
 .cbtn:hover{color:var(--accent);}

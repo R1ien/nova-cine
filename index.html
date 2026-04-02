@@ -135,6 +135,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="js/app.js"></script>
+<script src="js/player.js"></script>
 <script src="js/nav.js"></script>
 <script>
 var CORRECT_HASH='', heroFilm=null, vidEl=null, currentPlayCtx=null, saveTimer=null, currentUser=null;
@@ -201,36 +202,9 @@ function renderContinue() {
   initLazyImages();
 }
 
-// ── PLAY ──
-function videoType(u){var e=u.split('.').pop().split('?')[0].toLowerCase();return({mp4:'video/mp4',mkv:'video/x-matroska',mov:'video/quicktime',avi:'video/x-msvideo',webm:'video/webm',ogv:'video/ogg',m4v:'video/mp4',flv:'video/x-flv'})[e]||'video/mp4';}
-function buildPlayer(url, r) {
-  var wrap=document.getElementById('player-wrap'); wrap.innerHTML=''; vidEl=null; r=r||0;
-  if(/youtube\.com|youtu\.be/.test(url)){var id=(url.match(/(?:v=|youtu\.be\/)([^&?]+)/)||[])[1];if(id)wrap.innerHTML='<iframe src="https://www.youtube.com/embed/'+id+'?autoplay=1&start='+Math.floor(r)+'" allow="autoplay;fullscreen" allowfullscreen></iframe>';}
-  else if(/vimeo\.com/.test(url)){var id=(url.match(/vimeo\.com\/(\d+)/)||[])[1];if(id)wrap.innerHTML='<iframe src="https://player.vimeo.com/video/'+id+'?autoplay=1#t='+Math.floor(r)+'s" allow="autoplay;fullscreen" allowfullscreen></iframe>';}
-  else if(/dailymotion\.com/.test(url)){var id=(url.match(/dailymotion\.com\/video\/([^_?]+)/)||[])[1];if(id)wrap.innerHTML='<iframe src="https://www.dailymotion.com/embed/video/'+id+'?autoplay=1&start='+Math.floor(r)+'" allow="autoplay;fullscreen" allowfullscreen></iframe>';}
-  else {
-    /* preload=none for perf on slow devices */
-    wrap.innerHTML='<video id="vid" preload="none" playsinline><source src="'+url+'" type="'+videoType(url)+'"></video>'
-      +'<div class="vctrls"><div class="pbar" id="pbar" onclick="seekV(event)"><div class="pfill" id="pfill" style="width:0%"></div></div>'
-      +'<div class="crow">'
-      +'<button class="cbtn" onclick="togglePlay()"><span id="pico">▶</span></button>'
-      +'<button class="cbtn" onclick="skip(-10)"><svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 3.5A.5.5 0 0 1 1 4v3.248l6.267-3.636c.52-.302 1.233.043 1.233.696v2.94l6.267-3.636c.52-.302 1.233.043 1.233.696v7.384c0 .653-.713.998-1.233.696L8.5 8.752v2.94c0 .653-.713.998-1.233.696L1 8.752V12a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5z"/></svg></button>'
-      +'<button class="cbtn" onclick="skip(10)"><svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M15.5 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V8.752l-6.267 3.636c-.52.302-1.233-.043-1.233-.696v-2.94l-6.267 3.636C.713 12.69 0 12.345 0 11.692V4.308c0-.653.713-.998 1.233-.696L7.5 7.248V4.308c0-.653.713-.998 1.233-.696L15 7.248V4a.5.5 0 0 1 .5-.5z"/></svg></button>'
-      +'<input type="range" class="vslider" id="vslider" min="0" max="1" step="0.05" value="1" oninput="setVol(this.value)">'
-      +'<span class="tdisp" id="tdisp">0:00 / 0:00</span>'
-      +'<div class="cr"><button class="cbtn" onclick="toggleMute()"><svg width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707zm-1.414-1.414A6.491 6.491 0 0 0 12.025 8a6.491 6.491 0 0 0-1.903-4.596l-.707.707A5.494 5.494 0 0 1 11.025 8a5.494 5.494 0 0 1-1.61 3.889l.707.707zM8 3.5a.5.5 0 0 0-.812-.39L3.825 6H1.5A.5.5 0 0 0 1 6.5v3a.5.5 0 0 0 .5.5h2.325l3.363 2.89A.5.5 0 0 0 8 12.5v-9z"/></svg></button>'
-      +'<button class="cbtn" onclick="toggleFS()"><svg width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M1.5 1h4a.5.5 0 0 1 0 1h-4v4a.5.5 0 0 1-1 0v-4A.5.5 0 0 1 1 1h.5zm0 13h4a.5.5 0 0 1 0 1H1a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 1 0v4zm13 0h-4a.5.5 0 0 1 0-1h4v-4a.5.5 0 0 1 1 0v4a.5.5 0 0 1-.5.5H14.5zm0-13h-4a.5.5 0 0 1 0-1H15a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0v-4z"/></svg></button>'
-      +'</div></div></div>';
-    vidEl=document.getElementById('vid');
-    vidEl.addEventListener('timeupdate',updateProg);
-    vidEl.addEventListener('loadedmetadata',function(){updateProg();if(r>0)vidEl.currentTime=r;});
-    vidEl.addEventListener('play',function(){var e=document.getElementById('pico');if(e)e.textContent='⏸';});
-    vidEl.addEventListener('pause',function(){var e=document.getElementById('pico');if(e)e.textContent='▶';});
-    vidEl.play().catch(function(){});
-  }
-  initPlayerTouchControls();
-}
+// ── PLAY — delegates to player.js ──
 function openPlayer(url, r, html){buildPlayer(url,r);document.getElementById('player-info').innerHTML=html;document.getElementById('player-overlay').classList.add('open');}
+
 function closePlayer(){stopAutoSave();document.getElementById('player-overlay').classList.remove('open');document.getElementById('player-wrap').innerHTML='';vidEl=null;currentPlayCtx=null;renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
 function updateProg(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);}
 function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
@@ -309,8 +283,7 @@ document.getElementById('gate-overlay').addEventListener('click',function(e){if(
 document.addEventListener('keydown',function(e){
   if(document.getElementById('gate-overlay').classList.contains('open')){if(e.key>='0'&&e.key<='9')gp(e.key);if(e.key==='Backspace'){e.preventDefault();gdel();}if(e.key==='Escape')closeGate();return;}
   if(e.key==='Escape')closePlayer();
-  if(e.key===' '&&vidEl&&document.activeElement.tagName!=='INPUT'){e.preventDefault();togglePlay();}
-  if(e.key==='ArrowLeft'&&vidEl)skip(-10);if(e.key==='ArrowRight'&&vidEl)skip(10);
+  playerKeydown(e);
 });
 window.addEventListener('beforeunload',function(){stopAutoSave();});
 </script>
