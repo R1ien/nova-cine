@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080c14">
+<title>NovaCiné — Séries</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.page-wrap{padding:calc(var(--nav-h) + 1.5rem) 1rem 3rem;}
+.page-wrap h1{font-family:'Bebas Neue',cursive;font-size:2rem;margin-bottom:1.2rem;}
+.page-wrap h1 span{color:var(--accent);}
+@media(min-width:640px){.page-wrap{padding:calc(var(--nav-h) + 2rem) 1.5rem 3rem;}}
+@media(min-width:900px){.page-wrap{padding:calc(var(--nav-h) + 2.5rem) 3.5rem 3rem;}.page-wrap h1{font-size:2.5rem;}}
+@media(min-width:1200px){.page-wrap{padding:calc(var(--nav-h) + 2.5rem) 4rem 3rem;}}
+</style>
+</head>
+<body>
+<nav>
+  <a class="logo" href="index.html">NOVA<span>CINÉ</span></a>
+  <div class="nav-links">
+    <a href="index.html" data-page="home">Accueil</a>
+    <a href="films.html" data-page="films">Films</a>
+    <a href="series.html" data-page="series" class="active">Séries</a>
+  </div>
+  <div class="nav-right">
+    <a class="nav-login-btn hidden" href="login.html">Se connecter</a>
+    <div class="user-badge" id="user-badge">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <span class="user-name" id="user-name-display"></span>
+      <button class="logout-btn" onclick="doLogout()">✕</button>
+    </div>
+    <button class="wrench-btn" onclick="window.location.href='admin.html'" title="Administration">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+    </button>
+    <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="index.html" data-page="home">🏠 Accueil</a>
+  <a href="films.html" data-page="films">🎬 Films</a>
+  <a href="series.html" data-page="series">📺 Séries</a>
+  <div class="mobile-menu-footer"><a class="nav-login-btn hidden" href="login.html" style="display:flex;justify-content:center;">Se connecter →</a></div>
+</div>
+
+<div class="page-wrap">
+  <h1>Toutes les <span>Séries</span></h1>
+  <div class="filter-bar" id="filter-bar"></div>
+  <div class="cards-row" id="row-series"></div>
+</div>
+
+<div class="player-overlay" id="player-overlay">
+  <div class="player-modal">
+    <button class="modal-close" onclick="closePlayer()">✕</button>
+    <div class="player-wrap" id="player-wrap"></div>
+    <div class="modal-info" id="player-info"></div>
+  </div>
+</div>
+<div class="notif" id="notif"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="js/app.js"></script><script src="js/nav.js"></script>
+<script>
+var currentUser=null,vidEl=null,currentPlayCtx=null,saveTimer=null,activeGenre='Tous';
+(async function(){
+  initSB();currentUser=getSession();initNav('series');
+  if(currentUser)await loadUserProgress(currentUser.id);
+  await loadSeries();renderFilters();renderList(series);initLazyImages();
+})();
+function renderFilters(){
+  var genres=['Tous'];
+  series.forEach(function(s){if(s.genre&&genres.indexOf(s.genre)===-1)genres.push(s.genre);});
+  document.getElementById('filter-bar').innerHTML=genres.map(function(g){
+    return '<button class="filter-btn'+(g===activeGenre?' active':'')+'" onclick="filterBy(\''+esc(g)+'\')">'+esc(g)+'</button>';
+  }).join('');
+}
+function filterBy(g){activeGenre=g;renderFilters();renderList(g==='Tous'?series:series.filter(function(s){return s.genre===g;}));}
+function renderList(list){
+  document.getElementById('row-series').innerHTML=list.length
+    ?list.map(makeCard).join('')
+    :'<p style="color:var(--muted);padding:1rem;font-size:.85rem;">Aucune série.</p>';
+  initLazyImages();
+}
+function makeCard(s){
+  var p=getProgress(s.id);var bar='',badge='';
+  if(p&&p.percent>2&&!p.completed){bar='<div class="card-progress"><div class="card-progress-fill" style="width:'+Math.min(100,p.percent)+'%"></div></div>';badge='<div class="card-resume">REPRENDRE</div>';}
+  return '<div class="card" onclick="playSeries(\''+s.id+'\')">'
+    +(s.image_url?'<img data-src="'+esc(s.image_url)+'" alt="'+esc(s.title)+'" loading="lazy" decoding="async">':'<div class="card-no-img">'+svgSeries()+'</div>')
+    +badge+'<div class="card-overlay"><div class="card-name">'+esc(s.title)+'</div><div class="card-meta">'+esc(s.genre||'')+' '+(s.year||'')+'</div></div>'
+    +'<button class="card-play">▶</button>'+bar+'</div>';
+}
+function videoType(u){var e=u.split('.').pop().split('?')[0].toLowerCase();return({mp4:'video/mp4',mkv:'video/x-matroska',mov:'video/quicktime',avi:'video/x-msvideo',webm:'video/webm',ogv:'video/ogg',m4v:'video/mp4',flv:'video/x-flv'})[e]||'video/mp4';}
+function buildPlayer(url,r){
+  var wrap=document.getElementById('player-wrap');wrap.innerHTML='';vidEl=null;r=r||0;
+  if(/youtube\.com|youtu\.be/.test(url)){var id=(url.match(/(?:v=|youtu\.be\/)([^&?]+)/)||[])[1];if(id)wrap.innerHTML='<iframe src="https://www.youtube.com/embed/'+id+'?autoplay=1&start='+Math.floor(r)+'" allow="autoplay;fullscreen" allowfullscreen></iframe>';}
+  else if(/vimeo\.com/.test(url)){var id=(url.match(/vimeo\.com\/(\d+)/)||[])[1];if(id)wrap.innerHTML='<iframe src="https://player.vimeo.com/video/'+id+'?autoplay=1#t='+Math.floor(r)+'s" allow="autoplay;fullscreen" allowfullscreen></iframe>';}
+  else{wrap.innerHTML='<video id="vid" preload="none" playsinline><source src="'+url+'" type="'+videoType(url)+'"></video><div class="vctrls"><div class="pbar" id="pbar" onclick="seekV(event)"><div class="pfill" id="pfill" style="width:0%"></div></div><div class="crow"><button class="cbtn" onclick="togglePlay()"><span id="pico">▶</span></button><button class="cbtn" onclick="skip(-10)">-10s</button><button class="cbtn" onclick="skip(10)">+10s</button><input type="range" class="vslider" id="vslider" min="0" max="1" step="0.05" value="1" oninput="setVol(this.value)"><span class="tdisp" id="tdisp">0:00 / 0:00</span><div class="cr"><button class="cbtn" onclick="toggleMute()">🔊</button><button class="cbtn" onclick="toggleFS()">⛶</button></div></div></div>';
+  vidEl=document.getElementById('vid');
+  vidEl.addEventListener('timeupdate',function(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);});
+  vidEl.addEventListener('loadedmetadata',function(){if(r>0)vidEl.currentTime=r;});
+  vidEl.addEventListener('play',function(){var e=document.getElementById('pico');if(e)e.textContent='⏸';});
+  vidEl.addEventListener('pause',function(){var e=document.getElementById('pico');if(e)e.textContent='▶';});
+  vidEl.play().catch(function(){});}
+  initPlayerTouchControls();
+}
+function startSave(id){if(saveTimer)clearInterval(saveTimer);if(!currentUser)return;saveTimer=setInterval(function(){if(vidEl&&!isNaN(vidEl.duration)&&vidEl.duration>0)saveProgress(currentUser.id,id,false,vidEl.currentTime,vidEl.duration);},5000);}
+function stopSave(id){if(saveTimer){clearInterval(saveTimer);saveTimer=null;}if(id&&vidEl&&!isNaN(vidEl.duration)&&vidEl.duration>0&&currentUser)saveProgress(currentUser.id,id,false,vidEl.currentTime,vidEl.duration);}
+function buildInfo(s,eps,activeId){
+  var epHtml=eps.map(function(ep){var p=getProgress(ep.id);var pct=p?Math.min(100,p.percent):0;var extra=p&&p.percent>2?(p.completed?' <span style="color:var(--green);font-size:.68rem">✓</span>':' <span style="color:var(--accent);font-size:.68rem">'+fmt(p.position)+'</span>'):'';return '<div class="ep-row'+(ep.id===activeId?' playing':'')+'" onclick="switchEp(\''+ep.id+'\')">'+'<div class="ep-n">S'+(ep.season_number||1)+'E'+(ep.episode_number||1)+'</div>'+'<div class="ep-t">'+esc(ep.title)+extra+'</div>'+(pct>2?'<div class="ep-bar"><div class="ep-bar-fill" style="width:'+pct+'%"></div></div>':'')+'</div>';}).join('');
+  return '<div class="modal-title">'+esc(s.title)+'</div><div class="modal-meta">'+esc(s.genre||'')+(s.year?' · '+s.year:'')+'</div>'+(s.description?'<div class="modal-desc">'+esc(s.description)+'</div>':'')+(eps.length?'<div class="ep-list">'+epHtml+'</div>':'');
+}
+async function playSeries(id){
+  var s=series.find(function(x){return x.id===id;});if(!s)return;
+  var eps=await loadEps(id);window._seps=eps;window._sobj=s;
+  var start=eps[0];for(var i=0;i<eps.length;i++){var p=getProgress(eps[i].id);if(!p||(p&&!p.completed)){start=eps[i];break;}}
+  if(start){
+    var p=getProgress(start.id);var r=(p&&!p.completed)?p.position:0;
+    currentPlayCtx={type:'episode',id:start.id};buildPlayer(start.video_url,r);
+    document.getElementById('player-info').innerHTML=buildInfo(s,eps,start.id);
+    document.getElementById('player-overlay').classList.add('open');startSave(start.id);
+  } else {
+    document.getElementById('player-wrap').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:180px;color:var(--muted);font-size:.85rem">Aucun épisode.</div>';
+    document.getElementById('player-info').innerHTML=buildInfo(s,eps,null);document.getElementById('player-overlay').classList.add('open');
+  }
+}
+function switchEp(epId){
+  var prevId=currentPlayCtx?currentPlayCtx.id:null;stopSave(prevId);
+  var eps=window._seps||[];var s=window._sobj;var ep=eps.find(function(x){return x.id===epId;});if(!ep)return;
+  var p=getProgress(epId);var r=(p&&!p.completed)?p.position:0;
+  currentPlayCtx={type:'episode',id:epId};buildPlayer(ep.video_url,r);
+  if(s)document.getElementById('player-info').innerHTML=buildInfo(s,eps,epId);startSave(epId);
+}
+function closePlayer(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);document.getElementById('player-overlay').classList.remove('open');document.getElementById('player-wrap').innerHTML='';vidEl=null;currentPlayCtx=null;renderList(activeGenre==='Tous'?series:series.filter(function(s){return s.genre===activeGenre;}));}
+function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
+function skip(s){if(vidEl)vidEl.currentTime+=s;}
+function setVol(v){if(vidEl){vidEl.volume=parseFloat(v);vidEl.muted=v==0;}}
+function toggleMute(){if(vidEl){vidEl.muted=!vidEl.muted;var sl=document.getElementById('vslider');if(sl)sl.value=vidEl.muted?0:vidEl.volume;}}
+function toggleFS(){var w=document.getElementById('player-wrap');if(!document.fullscreenElement){if(w.requestFullscreen)w.requestFullscreen();}else{if(document.exitFullscreen)document.exitFullscreen();}}
+function seekV(e){var b=document.getElementById('pbar');if(!vidEl||!b)return;var r=b.getBoundingClientRect();vidEl.currentTime=((e.clientX-r.left)/r.width)*vidEl.duration;}
+document.getElementById('player-overlay').addEventListener('click',function(e){if(e.target===this)closePlayer();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();if(e.key===' '&&vidEl&&document.activeElement.tagName!=='INPUT'){e.preventDefault();togglePlay();}if(e.key==='ArrowLeft'&&vidEl)skip(-10);if(e.key==='ArrowRight'&&vidEl)skip(10);});
+window.addEventListener('beforeunload',function(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);});
+</script>
+</body>
+</html>

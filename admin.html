@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080c14">
+<title>NovaCiné — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="js/app.js"></script>
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* Gate screen */
+#gate-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 40%, rgba(232,160,32,.08), transparent 60%), var(--bg);
+  padding: 1rem;
+}
+/* Admin screen */
+#admin-screen { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ── GATE ── -->
+<div id="gate-screen">
+  <div class="gate-box">
+    <div class="gate-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+      </svg>
+    </div>
+    <h2>Administration</h2>
+    <p>Entrez le code d'accès pour continuer.</p>
+    <div class="gate-dots">
+      <div class="dot" id="d0"></div><div class="dot" id="d1"></div>
+      <div class="dot" id="d2"></div><div class="dot" id="d3"></div>
+    </div>
+    <div class="numpad">
+      <button class="nk" onclick="gp('1')">1</button><button class="nk" onclick="gp('2')">2</button><button class="nk" onclick="gp('3')">3</button>
+      <button class="nk" onclick="gp('4')">4</button><button class="nk" onclick="gp('5')">5</button><button class="nk" onclick="gp('6')">6</button>
+      <button class="nk" onclick="gp('7')">7</button><button class="nk" onclick="gp('8')">8</button><button class="nk" onclick="gp('9')">9</button>
+      <div class="nk nk-empty"></div>
+      <button class="nk" onclick="gp('0')">0</button>
+      <button class="nk nk-del" onclick="gdel()">⌫</button>
+    </div>
+    <button class="gate-cancel" onclick="window.location.href='index.html'">← Retour</button>
+  </div>
+</div>
+
+<!-- ── ADMIN PANEL ── -->
+<div id="admin-screen">
+  <div class="admin-topbar">
+    <a class="logo" href="index.html">NOVA<span>CINÉ</span></a>
+    <span style="font-size:.85rem;color:var(--accent);font-weight:600;letter-spacing:.1em;">ADMIN</span>
+    <button onclick="window.location.href='index.html'" style="background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.3);color:#e74c3c;padding:.4rem 1rem;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.82rem;touch-action:manipulation;">← Quitter</button>
+  </div>
+  <!-- Mobile tabs -->
+  <div class="admin-tabs" id="admin-tabs">
+    <button class="admin-tab active" data-s="dashboard" onclick="showSec('dashboard')">📊 Dashboard</button>
+    <button class="admin-tab" data-s="films" onclick="showSec('films')">🎬 Films</button>
+    <button class="admin-tab" data-s="series" onclick="showSec('series')">📺 Séries</button>
+    <button class="admin-tab" data-s="config" onclick="showSec('config')">⚙️ Config</button>
+  </div>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <h4>Panneau</h4>
+      <button class="sbtn active" data-s="dashboard" onclick="showSec('dashboard')">📊 Tableau de bord</button>
+      <button class="sbtn" data-s="films" onclick="showSec('films')">🎬 Films</button>
+      <button class="sbtn" data-s="series" onclick="showSec('series')">📺 Séries</button>
+      <button class="sbtn" data-s="config" onclick="showSec('config')">⚙️ Configuration</button>
+    </aside>
+    <main class="admin-main">
+
+      <!-- DASHBOARD -->
+      <div class="asec active" id="asec-dashboard">
+        <div class="aheader"><h2>Tableau de bord</h2></div>
+        <div class="stats-row">
+          <div class="stat-box"><div class="stat-n" id="s-films">0</div><div class="stat-l">Films</div></div>
+          <div class="stat-box"><div class="stat-n" id="s-series">0</div><div class="stat-l">Séries</div></div>
+          <div class="stat-box"><div class="stat-n" id="s-eps">0</div><div class="stat-l">Épisodes</div></div>
+          <div class="stat-box"><div class="stat-n" id="s-users">0</div><div class="stat-l">Utilisateurs</div></div>
+        </div>
+        <div class="info-banner">
+          <h3>⚙️ Configuration Supabase</h3>
+          <p>Éditez <strong>config.js</strong> avec vos clés, ou renseignez-les dans l'onglet Configuration. Sans Supabase, tout est sauvegardé en localStorage.</p>
+          <details><summary>Voir le SQL à exécuter</summary>
+          <pre class="sql-block">CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE TABLE IF NOT EXISTS films (id uuid DEFAULT gen_random_uuid() PRIMARY KEY, title text NOT NULL, description text, image_url text, video_url text NOT NULL, genre text, year integer, created_at timestamptz DEFAULT now());
+CREATE TABLE IF NOT EXISTS series (id uuid DEFAULT gen_random_uuid() PRIMARY KEY, title text NOT NULL, description text, image_url text, genre text, year integer, created_at timestamptz DEFAULT now());
+CREATE TABLE IF NOT EXISTS episodes (id uuid DEFAULT gen_random_uuid() PRIMARY KEY, series_id uuid NOT NULL REFERENCES series(id) ON DELETE CASCADE, title text NOT NULL, episode_number integer DEFAULT 1, season_number integer DEFAULT 1, video_url text NOT NULL, created_at timestamptz DEFAULT now());
+CREATE TABLE IF NOT EXISTS nc_users (id uuid DEFAULT gen_random_uuid() PRIMARY KEY, username text NOT NULL UNIQUE, password_hash text NOT NULL, created_at timestamptz DEFAULT now());
+CREATE TABLE IF NOT EXISTS progress (id uuid DEFAULT gen_random_uuid() PRIMARY KEY, user_id uuid NOT NULL REFERENCES nc_users(id) ON DELETE CASCADE, film_id uuid REFERENCES films(id) ON DELETE CASCADE, episode_id uuid REFERENCES episodes(id) ON DELETE CASCADE, position float DEFAULT 0, duration float DEFAULT 0, percent float DEFAULT 0, completed boolean DEFAULT false, updated_at timestamptz DEFAULT now(), CONSTRAINT uq_pf UNIQUE (user_id, film_id), CONSTRAINT uq_pe UNIQUE (user_id, episode_id));
+ALTER TABLE films ENABLE ROW LEVEL SECURITY; ALTER TABLE series ENABLE ROW LEVEL SECURITY; ALTER TABLE episodes ENABLE ROW LEVEL SECURITY; ALTER TABLE nc_users ENABLE ROW LEVEL SECURITY; ALTER TABLE progress ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "r_films" ON films FOR SELECT USING (true); CREATE POLICY "w_films" ON films FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "r_series" ON series FOR SELECT USING (true); CREATE POLICY "w_series" ON series FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "r_eps" ON episodes FOR SELECT USING (true); CREATE POLICY "w_eps" ON episodes FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "r_users" ON nc_users FOR SELECT USING (true); CREATE POLICY "w_users" ON nc_users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "r_prog" ON progress FOR SELECT USING (true); CREATE POLICY "w_prog" ON progress FOR ALL USING (true) WITH CHECK (true);</pre>
+          </details>
+        </div>
+      </div>
+
+      <!-- FILMS -->
+      <div class="asec" id="asec-films">
+        <div class="aheader"><h2>Films</h2><button class="btn-add" onclick="openFormFilm(null)">+ Ajouter un film</button></div>
+        <div class="agrid" id="agrid-films"></div>
+      </div>
+
+      <!-- SERIES -->
+      <div class="asec" id="asec-series">
+        <div class="aheader"><h2>Séries</h2><button class="btn-add" onclick="openFormSeries(null)">+ Ajouter une série</button></div>
+        <div class="agrid" id="agrid-series"></div>
+        <div class="ep-mgr" id="ep-mgr" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
+            <h3>Épisodes — <span id="ep-mgr-title" style="color:var(--accent)"></span></h3>
+            <div style="display:flex;gap:.7rem;">
+              <button class="btn-add" onclick="openFormEp(null)">+ Épisode</button>
+              <button onclick="closeEpMgr()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:.4rem .9rem;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.8rem;">Fermer</button>
+            </div>
+          </div>
+          <div class="ep-mgr-list" id="ep-mgr-list"></div>
+        </div>
+      </div>
+
+      <!-- CONFIG -->
+      <div class="asec" id="asec-config">
+        <div class="aheader"><h2>Configuration</h2></div>
+        <div style="max-width:480px;">
+          <div class="fg"><label>URL du projet Supabase</label><input type="text" id="cfg-url" placeholder="https://xxxxx.supabase.co" oninput="saveConfig()"></div>
+          <div class="fg"><label>Clé anonyme (anon key)</label><input type="text" id="cfg-key" placeholder="eyJhbGci..." oninput="saveConfig()"></div>
+          <button onclick="testConn()" style="margin-top:.8rem;background:var(--accent);color:#000;font-weight:700;border:none;padding:.65rem 1.3rem;border-radius:7px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.85rem;">Tester la connexion</button>
+          <div id="cfg-status" style="margin-top:.7rem;font-size:.83rem;"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- FORM MODALS -->
+<div class="form-overlay" id="form-film-overlay">
+  <div class="form-box">
+    <h3 id="form-film-h">Ajouter un Film</h3>
+    <input type="hidden" id="ff-id">
+    <div class="fg"><label>Titre *</label><input type="text" id="ff-title" placeholder="Titre du film"></div>
+    <div class="fg"><label>Description</label><textarea id="ff-desc" placeholder="Synopsis..."></textarea></div>
+    <div class="fg"><label>URL de l'image (affiche)</label><input type="url" id="ff-img" placeholder="https://...jpg"></div>
+    <div class="fg"><label>URL de la vidéo *</label><input type="url" id="ff-video" placeholder="https://...mp4"></div>
+    <div class="fg"><label>Genre</label><input type="text" id="ff-genre" placeholder="Action, Drame..."></div>
+    <div class="fg"><label>Année</label><input type="number" id="ff-year" placeholder="2024"></div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeFormFilm()">Annuler</button><button class="btn-save" onclick="saveFilm()">Sauvegarder</button></div>
+  </div>
+</div>
+
+<div class="form-overlay" id="form-series-overlay">
+  <div class="form-box">
+    <h3 id="form-series-h">Ajouter une Série</h3>
+    <input type="hidden" id="fs-id">
+    <div class="fg"><label>Titre *</label><input type="text" id="fs-title" placeholder="Titre de la série"></div>
+    <div class="fg"><label>Description</label><textarea id="fs-desc" placeholder="Synopsis..."></textarea></div>
+    <div class="fg"><label>URL de l'image (affiche)</label><input type="url" id="fs-img" placeholder="https://...jpg"></div>
+    <div class="fg"><label>Genre</label><input type="text" id="fs-genre" placeholder="Thriller, Sci-Fi..."></div>
+    <div class="fg"><label>Année</label><input type="number" id="fs-year" placeholder="2024"></div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeFormSeries()">Annuler</button><button class="btn-save" onclick="saveSeries()">Sauvegarder</button></div>
+  </div>
+</div>
+
+<div class="form-overlay" id="form-ep-overlay">
+  <div class="form-box">
+    <h3 id="form-ep-h">Ajouter un Épisode</h3>
+    <input type="hidden" id="fe-id">
+    <div class="fg"><label>Titre *</label><input type="text" id="fe-title" placeholder="Titre de l'épisode"></div>
+    <div class="fg"><label>Saison</label><input type="number" id="fe-season" value="1" min="1"></div>
+    <div class="fg"><label>Numéro d'épisode</label><input type="number" id="fe-num" value="1" min="1"></div>
+    <div class="fg"><label>URL de la vidéo *</label><input type="url" id="fe-video" placeholder="https://...mp4"></div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeFormEp()">Annuler</button><button class="btn-save" onclick="saveEp()">Sauvegarder</button></div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+var CORRECT_HASH = '';
+sha256('1390').then(function(h){ CORRECT_HASH = h; });
+var currentSeriesId = null, currentEps = [];
+
+// ── GATE ──
+var gbuf='', GLEN=4;
+function gp(d){ if(gbuf.length>=GLEN)return; gbuf+=d; refreshDots(); if(gbuf.length===GLEN) setTimeout(checkCode,130); }
+function gdel(){ gbuf=gbuf.slice(0,-1); refreshDots(); }
+function refreshDots(state){ for(var i=0;i<GLEN;i++){ var el=document.getElementById('d'+i); el.className='dot'; if(state==='err')el.classList.add('err'); else if(i<gbuf.length)el.classList.add('on'); } }
+async function checkCode() {
+  var h = await sha256(gbuf);
+  if (h === CORRECT_HASH) {
+    document.getElementById('gate-screen').style.display = 'none';
+    document.getElementById('admin-screen').style.display = 'block';
+    initSB(); loadConfig(); loadAdminData().then(function(){ initLazyImages(); });
+  } else {
+    refreshDots('err');
+    setTimeout(function(){ gbuf=''; refreshDots(); }, 700);
+  }
+}
+document.addEventListener('keydown', function(e){
+  if (document.getElementById('gate-screen').style.display !== 'none') {
+    if(e.key>='0'&&e.key<='9') gp(e.key);
+    if(e.key==='Backspace'){e.preventDefault();gdel();}
+  }
+  if(e.key==='Escape'){ closeFormFilm(); closeFormSeries(); closeFormEp(); }
+});
+
+// ── ADMIN SECTIONS ──
+function showSec(n) {
+  document.querySelectorAll('.asec').forEach(function(x){ x.classList.remove('active'); });
+  document.querySelectorAll('.sbtn').forEach(function(x){ x.classList.remove('active'); });
+  document.querySelectorAll('.admin-tab').forEach(function(x){ x.classList.remove('active'); });
+  document.getElementById('asec-'+n).classList.add('active');
+  var sb=document.querySelector('.sbtn[data-s="'+n+'"]'); if(sb) sb.classList.add('active');
+  var tb=document.querySelector('.admin-tab[data-s="'+n+'"]'); if(tb) tb.classList.add('active');
+}
+async function loadAdminData() {
+  await loadFilms(); await loadSeries();
+  renderAFilms(); renderASeries();
+  var eps = await loadAllEps();
+  document.getElementById('s-films').textContent = films.length;
+  document.getElementById('s-series').textContent = series.length;
+  document.getElementById('s-eps').textContent = eps.length;
+  if (SB) { var r=await SB.from('nc_users').select('id',{count:'exact',head:true}); document.getElementById('s-users').textContent=r.count||0; }
+  else { document.getElementById('s-users').textContent=lload('nc_local_users',[]).length; }
+}
+function loadConfig() {
+  document.getElementById('cfg-url').value = localStorage.getItem('nc_url')||'';
+  document.getElementById('cfg-key').value = localStorage.getItem('nc_key')||'';
+}
+function saveConfig() {
+  localStorage.setItem('nc_url', document.getElementById('cfg-url').value.trim());
+  localStorage.setItem('nc_key', document.getElementById('cfg-key').value.trim());
+  initSB();
+}
+async function testConn() {
+  var el=document.getElementById('cfg-status'); el.style.color='var(--muted)'; el.textContent='Test...';
+  if(!SB){el.style.color='#e74c3c';el.textContent='Pas de client Supabase configuré.';return;}
+  try { var r=await SB.from('films').select('id').limit(1); if(r.error)throw r.error; el.style.color='#2ecc71';el.textContent='Connexion réussie !'; }
+  catch(e){el.style.color='#e74c3c';el.textContent='Erreur: '+e.message;}
+}
+
+// ── FILMS ──
+function renderAFilms() {
+  var g=document.getElementById('agrid-films');
+  if(!films.length){g.innerHTML='<p style="color:var(--muted);font-size:.85rem;">Aucun film. Cliquez sur + Ajouter.</p>';return;}
+  g.innerHTML=films.map(function(f){
+    return '<div class="acard">'+(f.image_url?'<img src="'+esc(f.image_url)+'" onerror="this.style.display=\'none\'">':'<div class="acard-no-img">'+svgFilm()+'</div>')
+      +'<div class="acard-body"><div class="acard-title">'+esc(f.title)+'</div><div class="acard-sub">'+esc(f.genre||'')+' '+(f.year||'')+'</div>'
+      +'<div class="acard-actions"><button class="bsm bsm-edit" onclick="openFormFilm(\''+f.id+'\')">✎ Éditer</button><button class="bsm bsm-del" onclick="delFilm(\''+f.id+'\')">✕ Suppr.</button></div></div></div>';
+  }).join('');
+}
+function openFormFilm(id) {
+  var f=id?films.find(function(x){return x.id===id;}):null;
+  document.getElementById('form-film-h').textContent=f?'Modifier le Film':'Ajouter un Film';
+  document.getElementById('ff-id').value=f?f.id:'';
+  document.getElementById('ff-title').value=f?f.title:'';
+  document.getElementById('ff-desc').value=f?(f.description||''):'';
+  document.getElementById('ff-img').value=f?(f.image_url||''):'';
+  document.getElementById('ff-video').value=f?(f.video_url||''):'';
+  document.getElementById('ff-genre').value=f?(f.genre||''):'';
+  document.getElementById('ff-year').value=f?(f.year||''):'';
+  document.getElementById('form-film-overlay').classList.add('open');
+}
+function closeFormFilm(){ document.getElementById('form-film-overlay').classList.remove('open'); }
+async function saveFilm() {
+  var id=document.getElementById('ff-id').value;
+  var title=document.getElementById('ff-title').value.trim();
+  var video=document.getElementById('ff-video').value.trim();
+  if(!title||!video){notif('Titre et URL vidéo requis.','err');return;}
+  var f={title:title,video_url:video,description:document.getElementById('ff-desc').value.trim(),image_url:document.getElementById('ff-img').value.trim(),genre:document.getElementById('ff-genre').value.trim(),year:parseInt(document.getElementById('ff-year').value)||null};
+  if(id) f.id=id;
+  try{await dbSaveFilm(f);await loadFilms();renderAFilms();closeFormFilm();notif(id?'Film mis à jour !':'Film ajouté !');document.getElementById('s-films').textContent=films.length;}
+  catch(e){notif('Erreur: '+e.message,'err');}
+}
+async function delFilm(id){if(!confirm('Supprimer ce film ?'))return;try{await dbDelFilm(id);renderAFilms();notif('Film supprimé.');document.getElementById('s-films').textContent=films.length;}catch(e){notif('Erreur: '+e.message,'err');}}
+
+// ── SERIES ──
+function renderASeries() {
+  var g=document.getElementById('agrid-series');
+  if(!series.length){g.innerHTML='<p style="color:var(--muted);font-size:.85rem;">Aucune série. Cliquez sur + Ajouter.</p>';return;}
+  g.innerHTML=series.map(function(s){
+    return '<div class="acard">'+(s.image_url?'<img src="'+esc(s.image_url)+'" onerror="this.style.display=\'none\'">':'<div class="acard-no-img">'+svgSeries()+'</div>')
+      +'<div class="acard-body"><div class="acard-title">'+esc(s.title)+'</div><div class="acard-sub">'+esc(s.genre||'')+' '+(s.year||'')+'</div>'
+      +'<div class="acard-actions"><button class="bsm bsm-ep" onclick="openEpMgr(\''+s.id+'\')">📺 Épisodes</button><button class="bsm bsm-edit" onclick="openFormSeries(\''+s.id+'\')">✎</button><button class="bsm bsm-del" onclick="delSeries(\''+s.id+'\')">✕</button></div></div></div>';
+  }).join('');
+}
+function openFormSeries(id) {
+  var s=id?series.find(function(x){return x.id===id;}):null;
+  document.getElementById('form-series-h').textContent=s?'Modifier la Série':'Ajouter une Série';
+  document.getElementById('fs-id').value=s?s.id:'';
+  document.getElementById('fs-title').value=s?s.title:'';
+  document.getElementById('fs-desc').value=s?(s.description||''):'';
+  document.getElementById('fs-img').value=s?(s.image_url||''):'';
+  document.getElementById('fs-genre').value=s?(s.genre||''):'';
+  document.getElementById('fs-year').value=s?(s.year||''):'';
+  document.getElementById('form-series-overlay').classList.add('open');
+}
+function closeFormSeries(){ document.getElementById('form-series-overlay').classList.remove('open'); }
+async function saveSeries() {
+  var id=document.getElementById('fs-id').value;
+  var title=document.getElementById('fs-title').value.trim();
+  if(!title){notif('Titre requis.','err');return;}
+  var s={title:title,description:document.getElementById('fs-desc').value.trim(),image_url:document.getElementById('fs-img').value.trim(),genre:document.getElementById('fs-genre').value.trim(),year:parseInt(document.getElementById('fs-year').value)||null};
+  if(id) s.id=id;
+  try{await dbSaveSeries(s);await loadSeries();renderASeries();closeFormSeries();notif(id?'Série mise à jour !':'Série ajoutée !');document.getElementById('s-series').textContent=series.length;}
+  catch(e){notif('Erreur: '+e.message,'err');}
+}
+async function delSeries(id){if(!confirm('Supprimer cette série et ses épisodes ?'))return;try{await dbDelSeries(id);renderASeries();closeEpMgr();notif('Série supprimée.');document.getElementById('s-series').textContent=series.length;}catch(e){notif('Erreur: '+e.message,'err');}}
+
+// ── EPISODES ──
+async function openEpMgr(sid) {
+  currentSeriesId=sid;
+  var s=series.find(function(x){return x.id===sid;});
+  document.getElementById('ep-mgr-title').textContent=s?s.title:'';
+  currentEps=await loadEps(sid); renderEpMgr();
+  var m=document.getElementById('ep-mgr'); m.style.display='block';
+  setTimeout(function(){m.scrollIntoView({behavior:'smooth',block:'start'});},100);
+}
+function closeEpMgr(){ document.getElementById('ep-mgr').style.display='none'; currentSeriesId=null; }
+function renderEpMgr() {
+  var l=document.getElementById('ep-mgr-list');
+  if(!currentEps.length){l.innerHTML='<p style="color:var(--muted);font-size:.83rem;padding:.4rem">Aucun épisode.</p>';return;}
+  l.innerHTML=currentEps.map(function(ep){
+    return '<div class="ep-mgr-row"><div class="ep-mgr-info"><span class="ep-mgr-badge">S'+(ep.season_number||1)+'E'+(ep.episode_number||1)+'</span><span class="ep-mgr-t">'+esc(ep.title)+'</span><div class="ep-mgr-url">'+esc(ep.video_url||'')+'</div></div>'
+      +'<div class="ep-mgr-actions"><button class="bsm bsm-edit" onclick="openFormEp(\''+ep.id+'\')">✎</button><button class="bsm bsm-del" onclick="delEp(\''+ep.id+'\')">✕</button></div></div>';
+  }).join('');
+}
+function openFormEp(id) {
+  var ep=id?currentEps.find(function(x){return x.id===id;}):null;
+  document.getElementById('form-ep-h').textContent=ep?"Modifier l'Épisode":"Ajouter un Épisode";
+  document.getElementById('fe-id').value=ep?ep.id:'';
+  document.getElementById('fe-title').value=ep?ep.title:'';
+  document.getElementById('fe-season').value=ep?(ep.season_number||1):1;
+  document.getElementById('fe-num').value=ep?(ep.episode_number||1):(currentEps.length+1);
+  document.getElementById('fe-video').value=ep?(ep.video_url||''):'';
+  document.getElementById('form-ep-overlay').classList.add('open');
+}
+function closeFormEp(){ document.getElementById('form-ep-overlay').classList.remove('open'); }
+async function saveEp() {
+  if(!currentSeriesId)return;
+  var id=document.getElementById('fe-id').value;
+  var title=document.getElementById('fe-title').value.trim();
+  var video=document.getElementById('fe-video').value.trim();
+  if(!title||!video){notif('Titre et URL requis.','err');return;}
+  var ep={title:title,video_url:video,series_id:currentSeriesId,season_number:parseInt(document.getElementById('fe-season').value)||1,episode_number:parseInt(document.getElementById('fe-num').value)||1};
+  if(id)ep.id=id;
+  try{await dbSaveEp(ep);currentEps=await loadEps(currentSeriesId);renderEpMgr();closeFormEp();notif(id?'Épisode mis à jour !':'Épisode ajouté !');var ae=await loadAllEps();document.getElementById('s-eps').textContent=ae.length;}
+  catch(e){notif('Erreur: '+e.message,'err');}
+}
+async function delEp(id){if(!confirm('Supprimer cet épisode ?'))return;try{await dbDelEp(id);currentEps=await loadEps(currentSeriesId);renderEpMgr();notif('Épisode supprimé.');var ae=await loadAllEps();document.getElementById('s-eps').textContent=ae.length;}catch(e){notif('Erreur: '+e.message,'err');}}
+
+// ── FORM OVERLAY CLOSE ──
+document.getElementById('form-film-overlay').addEventListener('click',function(e){if(e.target===this)closeFormFilm();});
+document.getElementById('form-series-overlay').addEventListener('click',function(e){if(e.target===this)closeFormSeries();});
+document.getElementById('form-ep-overlay').addEventListener('click',function(e){if(e.target===this)closeFormEp();});
+</script>
+<script src="js/nav.js"></script>
+</body>
+</html>
