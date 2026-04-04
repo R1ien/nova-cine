@@ -1,175 +1,389 @@
 /* ═══════════════════════════════════════════
-   NovaCiné — player.js (Plyr Edition v3)
-   Fixes :
-   - Boutons skip 10s custom UNIQUEMENT (pas de doublons)
-   - Auto-hide barre 4s (géré manuellement, fonctionne aussi en fullscreen)
-   - Bulles derrière la vidéo
+   NovaCiné — player.js  (Video.js + Liquid Glass UI)
+   Design iOS 26 Liquid Glass, couleurs NovaCiné
+   Auto-hide fullscreen 100% fiable via document listeners
+   Boutons +10s / -10s custom intégrés
    ═══════════════════════════════════════════ */
 
 var _currentVideoUrl = '';
-var _plyrPlayer      = null;
-var _hideTimer       = null;  // timer auto-hide barre
+var _vjsPlayer       = null;
+var _hideTimer       = null;
+var _vjsEl           = null;   // div.video-js
+var _ctrlEl          = null;   // div.vjs-control-bar
 
 var IS_IOS    = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 var IS_MOBILE = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 /* ══════════════════════════════
-   INJECT Plyr (lazy, once)
+   INJECT Video.js (lazy, once)
 ══════════════════════════════ */
-var _plyrLoaded = false;
-function loadPlyrAssets() {
+var _vjsLoaded = false;
+function loadVjsAssets() {
   return new Promise(function(resolve) {
-    if (_plyrLoaded && typeof Plyr !== 'undefined') { resolve(); return; }
-    if (!document.getElementById('plyr-css')) {
-      var link = document.createElement('link');
-      link.id = 'plyr-css'; link.rel = 'stylesheet';
-      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.css';
-      document.head.appendChild(link);
+    if (_vjsLoaded && typeof videojs !== 'undefined') { resolve(); return; }
+    if (!document.getElementById('vjs-css')) {
+      var l = document.createElement('link');
+      l.id = 'vjs-css'; l.rel = 'stylesheet';
+      l.href = 'https://cdnjs.cloudflare.com/ajax/libs/video.js/8.10.0/video-js.min.css';
+      document.head.appendChild(l);
     }
-    if (!document.getElementById('plyr-js')) {
-      var script = document.createElement('script');
-      script.id  = 'plyr-js';
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.js';
-      script.onload = function() { _plyrLoaded = true; injectNovaCineTheme(); resolve(); };
-      document.head.appendChild(script);
-    } else if (typeof Plyr !== 'undefined') {
-      _plyrLoaded = true; resolve();
+    if (!document.getElementById('vjs-js')) {
+      var s = document.createElement('script');
+      s.id = 'vjs-js';
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/video.js/8.10.0/video.min.js';
+      s.onload = function() { _vjsLoaded = true; injectTheme(); resolve(); };
+      document.head.appendChild(s);
+    } else if (typeof videojs !== 'undefined') {
+      _vjsLoaded = true; resolve();
     } else {
-      var chk = setInterval(function() {
-        if (typeof Plyr !== 'undefined') { clearInterval(chk); _plyrLoaded = true; resolve(); }
+      var c = setInterval(function() {
+        if (typeof videojs !== 'undefined') { clearInterval(c); _vjsLoaded = true; resolve(); }
       }, 80);
     }
   });
 }
 
 /* ══════════════════════════════
-   THÈME NOVACINÉ
+   THÈME LIQUID GLASS
 ══════════════════════════════ */
-function injectNovaCineTheme() {
-  if (document.getElementById('nc-plyr-theme')) return;
+function injectTheme() {
+  if (document.getElementById('nc-vjs-lg')) return;
   var s = document.createElement('style');
-  s.id = 'nc-plyr-theme';
+  s.id = 'nc-vjs-lg';
   s.textContent = `
-    #nc-player-container {
+    /* ── Conteneur ── */
+    #nc-wrap {
       position: relative; width: 100%; height: 100%;
       background: #000; overflow: hidden;
+      font-family: 'DM Sans', system-ui, sans-serif;
     }
 
-    /* Bulles — z-index 0, derrière tout */
-    .nc-bubble {
+    /* ── Bulles ── */
+    .nc-bbl {
       position: absolute; border-radius: 50%;
       pointer-events: none; z-index: 0; opacity: 0;
-      animation: nc-float linear infinite;
+      animation: ncFloat linear infinite;
     }
-    @keyframes nc-float {
-      0%   { transform: translateY(0) scale(1);     opacity: 0; }
-      15%  { opacity: .7; }
-      85%  { opacity: .4; }
-      100% { transform: translateY(-115%) scale(.5); opacity: 0; }
+    @keyframes ncFloat {
+      0%   { transform: translateY(0) scale(1);    opacity: 0; }
+      12%  { opacity: .65; }
+      88%  { opacity: .35; }
+      100% { transform: translateY(-118%) scale(.45); opacity: 0; }
     }
 
-    /* Plyr — z-index 1 */
-    #nc-player-container .plyr {
+    /* ── Video.js reset ── */
+    #nc-wrap .video-js {
       position: relative; z-index: 1;
       width: 100% !important; height: 100% !important;
-      --plyr-color-main: #e8a020;
-      --plyr-video-background: #000;
-      --plyr-control-spacing: 10px;
-      --plyr-range-fill-background: #e8a020;
-      --plyr-video-control-color: rgba(255,255,255,.85);
-      --plyr-video-control-color-hover: #e8a020;
-      --plyr-control-icon-size: 18px;
-      --plyr-font-family: 'DM Sans', sans-serif;
-      --plyr-font-size-base: 13px;
-      --plyr-tooltip-background: rgba(8,12,20,.92);
-      --plyr-tooltip-color: #e8a020;
-      --plyr-tooltip-radius: 5px;
+      background: transparent;
+      font-family: inherit;
+    }
+    #nc-wrap .vjs-tech { background: #000; object-fit: contain; }
+
+    /* ─────────────────────────────────────────
+       BARRE DE CONTRÔLE LIQUID GLASS
+    ───────────────────────────────────────── */
+    #nc-wrap .vjs-control-bar {
+      /* Liquid glass */
+      background: rgba(8, 12, 20, 0.45) !important;
+      backdrop-filter: blur(28px) saturate(1.8) brightness(1.05);
+      -webkit-backdrop-filter: blur(28px) saturate(1.8) brightness(1.05);
+      border: 1px solid rgba(255,255,255,.13);
+      border-bottom: none;
+      border-radius: 20px 20px 0 0;
+
+      /* Layout */
+      display: flex !important;
+      flex-direction: column;
+      gap: 0;
+      height: auto !important;
+      padding: 6px 14px 10px;
+      position: absolute; bottom: 0; left: 0; right: 0;
+      z-index: 10;
+
+      /* Transition — géré par nc-hidden */
+      transition: opacity .3s ease, transform .3s ease;
+    }
+    #nc-wrap .vjs-control-bar::before {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,.06) 0%,
+        rgba(255,255,255,.01) 100%
+      );
+      pointer-events: none;
     }
 
-    /* Barre de contrôle — transition opacity gérée par notre JS */
-    #nc-player-container .plyr__controls {
-      background: linear-gradient(to top, rgba(0,0,0,.92) 0%, transparent 100%) !important;
-      padding: 8px 10px !important;
-      transition: opacity .35s ease !important;
-      opacity: 1;
-    }
-    /* Quand on cache la barre */
-    #nc-player-container .plyr.nc-ctrl-hidden .plyr__controls {
+    /* CACHER la barre */
+    #nc-wrap .video-js.nc-hidden .vjs-control-bar {
       opacity: 0 !important;
+      transform: translateY(6px);
       pointer-events: none !important;
     }
-    #nc-player-container .plyr.nc-ctrl-hidden {
-      cursor: none;
+    /* Toujours visible en pause */
+    #nc-wrap .video-js.vjs-paused .vjs-control-bar {
+      opacity: 1 !important;
+      transform: none !important;
+      pointer-events: auto !important;
     }
 
-    /* Barre de progression */
-    #nc-player-container .plyr__progress input[type=range]::-webkit-slider-thumb { background: #e8a020; }
-    #nc-player-container .plyr__progress input[type=range]::-moz-range-thumb      { background: #e8a020; }
-
-    /* Bouton play central */
-    #nc-player-container .plyr__control--overlaid {
-      background: rgba(8,12,20,.72) !important;
-      border: 2px solid #e8a020 !important;
-      color: #e8a020 !important;
-      border-radius: 50% !important;
-      width: 64px; height: 64px;
-      backdrop-filter: blur(6px);
-      transition: background .2s, transform .2s !important;
-    }
-    #nc-player-container .plyr__control--overlaid:hover {
-      background: rgba(232,160,32,.18) !important;
-      transform: scale(1.1) !important;
-    }
-    #nc-player-container .plyr__control--overlaid svg { color: #e8a020; }
-
-    /* Boutons skip custom */
-    .nc-skip-btn {
-      background: none; border: none;
-      color: rgba(255,255,255,.85);
+    /* ─── Ligne 1 : barre de progression ─── */
+    #nc-wrap .vjs-progress-control {
+      width: 100% !important;
+      height: 18px;
+      display: flex; align-items: center;
+      margin-bottom: 4px;
       cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      padding: 4px 6px; border-radius: 5px;
-      transition: color .15s;
     }
-    .nc-skip-btn:hover { color: #e8a020; }
-    .nc-skip-btn svg   { width: 20px; height: 20px; fill: currentColor; display: block; }
+    #nc-wrap .vjs-progress-holder {
+      flex: 1;
+      height: 4px;
+      border-radius: 4px;
+      background: rgba(255,255,255,.2);
+      transition: height .15s;
+      position: relative;
+      overflow: visible;
+    }
+    #nc-wrap .vjs-progress-control:hover .vjs-progress-holder { height: 7px; }
+
+    #nc-wrap .vjs-play-progress {
+      background: linear-gradient(90deg, #c87010, #e8a020, #f0c060);
+      border-radius: 4px;
+      position: relative;
+    }
+    #nc-wrap .vjs-play-progress::before {
+      /* Thumb */
+      content: '';
+      position: absolute; right: -5px; top: 50%;
+      transform: translateY(-50%) scale(0);
+      width: 13px; height: 13px;
+      background: #f0c060;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(240,192,96,.6);
+      transition: transform .15s;
+    }
+    #nc-wrap .vjs-progress-control:hover .vjs-play-progress::before { transform: translateY(-50%) scale(1); }
+
+    #nc-wrap .vjs-load-progress { background: rgba(255,255,255,.12); border-radius: 4px; }
+    #nc-wrap .vjs-load-progress div { background: rgba(255,255,255,.08); }
+
+    /* Tooltip */
+    #nc-wrap .vjs-time-tooltip {
+      background: rgba(8,12,20,.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(232,160,32,.35);
+      color: #e8a020;
+      border-radius: 8px;
+      font-size: .72rem;
+      padding: 3px 8px;
+    }
+    #nc-wrap .vjs-mouse-display { display: none; } /* on n'utilise pas le ghost */
+
+    /* ─── Ligne 2 : boutons ─── */
+    #nc-wrap .vjs-control-bar > .vjs-button,
+    #nc-wrap .vjs-control-bar > .vjs-time-control,
+    #nc-wrap .vjs-control-bar > .vjs-volume-panel,
+    #nc-wrap .vjs-control-bar > .nc-skip,
+    #nc-wrap .vjs-control-bar > .vjs-playback-rate,
+    #nc-wrap .vjs-control-bar > .vjs-fullscreen-control {
+      /* on empile tout sur la 2e ligne grâce au flex row */
+      flex-shrink: 0;
+    }
+
+    /* Retirer la hauteur fixe VJS */
+    #nc-wrap .vjs-button { height: auto !important; }
+
+    /* Pill Liquid Glass pour chaque bouton */
+    .nc-lg-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      border: none; cursor: pointer;
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,.14);
+      color: rgba(255,255,255,.9);
+      transition: background .18s, border-color .18s, transform .15s;
+      position: relative; overflow: hidden;
+    }
+    .nc-lg-btn::after {
+      content: '';
+      position: absolute; inset: 0; border-radius: inherit;
+      background: linear-gradient(135deg, rgba(255,255,255,.14) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .nc-lg-btn:hover {
+      background: rgba(232,160,32,.22);
+      border-color: rgba(232,160,32,.5);
+      transform: scale(1.08);
+    }
+    .nc-lg-btn:active { transform: scale(.94); }
+    .nc-lg-btn svg { width: 18px; height: 18px; fill: currentColor; position: relative; z-index: 1; }
+
+    /* Bouton play — légèrement plus grand + accent gold */
+    .nc-lg-btn.nc-play {
+      width: 44px; height: 44px;
+      background: rgba(232,160,32,.18);
+      border-color: rgba(232,160,32,.45);
+    }
+    .nc-lg-btn.nc-play:hover {
+      background: rgba(232,160,32,.35);
+    }
+
+    /* Texte du temps */
+    #nc-wrap .vjs-time-control {
+      display: flex !important; align-items: center;
+      color: rgba(255,255,255,.65);
+      font-size: .75rem; font-weight: 500;
+      padding: 0 4px; line-height: 1;
+      height: 38px;
+    }
+    #nc-wrap .vjs-time-divider { padding: 0 2px; }
+
+    /* Volume */
+    #nc-wrap .vjs-volume-panel { display: flex !important; align-items: center; height: 38px; }
+    #nc-wrap .vjs-volume-bar.vjs-slider-horizontal { width: 56px; height: 4px; border-radius: 4px; background: rgba(255,255,255,.2); }
+    #nc-wrap .vjs-volume-level { background: #e8a020; border-radius: 4px; }
+    #nc-wrap .vjs-volume-level::before { color: #e8a020 !important; }
+
+    /* Spacer */
+    #nc-wrap .nc-spacer { flex: 1; }
+
+    /* Taux de lecture — pill */
+    #nc-wrap .vjs-playback-rate .vjs-playback-rate-value {
+      display: flex; align-items: center; justify-content: center;
+      height: 30px; padding: 0 10px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,.13);
+      color: rgba(255,255,255,.8); font-size: .72rem; font-weight: 600;
+      transition: background .18s;
+    }
+    #nc-wrap .vjs-playback-rate:hover .vjs-playback-rate-value {
+      background: rgba(232,160,32,.18);
+      border-color: rgba(232,160,32,.4);
+      color: #e8a020;
+    }
+    #nc-wrap .vjs-playback-rate .vjs-icon-placeholder { display: none; }
 
     /* Menu vitesse */
-    #nc-player-container .plyr__menu__container {
-      background: rgba(8,12,20,.95);
-      border: 1px solid rgba(31,45,69,.9);
-      border-radius: 8px;
+    #nc-wrap .vjs-menu-content {
+      background: rgba(8,12,20,.88) !important;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px;
+      overflow: hidden;
+      bottom: 48px !important;
     }
-    #nc-player-container .plyr__menu__container .plyr__control {
-      color: rgba(220,232,247,.8); font-size: .82rem;
+    #nc-wrap .vjs-menu-item {
+      font-size: .8rem; color: rgba(220,232,247,.8);
+      padding: .55rem 1.1rem;
+      transition: background .12s;
     }
-    #nc-player-container .plyr__menu__container .plyr__control:hover,
-    #nc-player-container .plyr__menu__container .plyr__control[aria-checked=true] {
-      background: rgba(232,160,32,.15); color: #e8a020;
+    #nc-wrap .vjs-menu-item:hover,
+    #nc-wrap .vjs-menu-item.vjs-selected { background: rgba(232,160,32,.14) !important; color: #e8a020 !important; }
+
+    /* Big play button */
+    #nc-wrap .vjs-big-play-button {
+      width: 68px; height: 68px;
+      border-radius: 50%;
+      border: 2px solid rgba(232,160,32,.6) !important;
+      background: rgba(8,12,20,.55) !important;
+      backdrop-filter: blur(16px);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      margin: 0;
+      transition: background .2s, transform .2s, border-color .2s;
+    }
+    #nc-wrap .vjs-big-play-button::before {
+      color: #e8a020 !important;
+      font-size: 1.9em;
+      line-height: 64px;
+    }
+    #nc-wrap .vjs-big-play-button::after {
+      content: '';
+      position: absolute; inset: 0; border-radius: 50%;
+      background: linear-gradient(135deg, rgba(255,255,255,.15) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    #nc-wrap .video-js:hover .vjs-big-play-button {
+      background: rgba(232,160,32,.2) !important;
+      border-color: rgba(232,160,32,.9) !important;
+      transform: translate(-50%, -50%) scale(1.08);
     }
 
-    /* Iframe embeds */
-    #nc-player-container iframe {
-      position: relative; z-index: 1;
-      width: 100%; height: 100%; border: none; display: block;
+    /* Spinner */
+    #nc-wrap .vjs-loading-spinner {
+      border-color: rgba(232,160,32,.25);
+    }
+    #nc-wrap .vjs-loading-spinner::before,
+    #nc-wrap .vjs-loading-spinner::after {
+      border-top-color: #e8a020;
     }
 
-    /* Loading */
+    /* ── Boutons skip 10s custom ── */
+    .nc-skip {
+      display: inline-flex;
+      align-items: center; justify-content: center;
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(12px);
+      cursor: pointer;
+      color: rgba(255,255,255,.9);
+      transition: background .18s, border-color .18s, transform .15s;
+      position: relative; overflow: hidden;
+    }
+    .nc-skip::after {
+      content: '';
+      position: absolute; inset: 0; border-radius: inherit;
+      background: linear-gradient(135deg, rgba(255,255,255,.14) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .nc-skip:hover {
+      background: rgba(232,160,32,.22);
+      border-color: rgba(232,160,32,.5);
+      transform: scale(1.08);
+    }
+    .nc-skip:active { transform: scale(.94); }
+    .nc-skip svg { width: 20px; height: 20px; fill: currentColor; position: relative; z-index: 1; }
+
+    /* ── Cacher les éléments VJS qu'on remplace ── */
+    #nc-wrap .vjs-play-control,
+    #nc-wrap .vjs-skip-backward,
+    #nc-wrap .vjs-skip-forward,
+    #nc-wrap .vjs-mute-control,
+    #nc-wrap .vjs-fullscreen-control {
+      display: none !important;
+    }
+
+    /* Cacher la div volume-panel originale
+       (on recrée notre propre layout) */
+    /* on garde .vjs-volume-panel pour le slider */
+
+    /* ── Loading state ── */
     .nc-loading {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       height: 100%; gap: 1rem;
       color: rgba(220,232,247,.7); font-family: 'DM Sans', sans-serif;
     }
-    .nc-loading-spinner {
+    .nc-spin {
       width: 38px; height: 38px;
-      border: 3px solid rgba(255,255,255,.12);
+      border: 3px solid rgba(255,255,255,.1);
       border-top-color: #e8a020; border-radius: 50%;
-      animation: nc-spin .8s linear infinite;
+      animation: ncSpin .8s linear infinite;
     }
-    @keyframes nc-spin { to { transform: rotate(360deg); } }
+    @keyframes ncSpin { to { transform: rotate(360deg); } }
 
-    /* Fallback */
+    /* ── Fallback ── */
     .nc-fallback {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
@@ -178,96 +392,224 @@ function injectNovaCineTheme() {
     }
     .nc-fallback-icon { font-size: 2.5rem; }
     .nc-fallback-msg  { color: rgba(220,232,247,.9); font-size: .88rem; line-height: 1.6; max-width: 380px; }
-    .nc-fallback-btn  { background: #e8a020; color: #000; font-weight: 700; padding: .7rem 1.4rem; border-radius: 8px; text-decoration: none; font-size: .9rem; display: inline-block; }
-    .nc-fallback-url  { color: rgba(220,232,247,.4); font-size: .72rem; word-break: break-all; max-width: 340px; }
+    .nc-fallback-btn  { background: #e8a020; color: #000; font-weight: 700; padding: .7rem 1.4rem; border-radius: 12px; text-decoration: none; font-size: .9rem; display: inline-block; }
+    .nc-fallback-url  { color: rgba(220,232,247,.35); font-size: .72rem; word-break: break-all; max-width: 340px; }
 
-    /* Banner iOS */
+    /* ── Banner iOS ── */
     .nc-ios-banner {
       position: absolute; top: 0; left: 0; right: 0; z-index: 30;
-      background: rgba(232,160,32,.13);
-      border-bottom: 1px solid rgba(232,160,32,.3);
+      background: rgba(232,160,32,.12);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(232,160,32,.28);
       padding: .5rem 1rem;
       display: flex; align-items: center; justify-content: space-between; gap: .8rem;
       font-family: 'DM Sans', sans-serif;
-      animation: nc-slideDown .3s ease;
+      animation: ncSlideDown .3s ease;
     }
-    @keyframes nc-slideDown { from { transform: translateY(-100%); } to { transform: none; } }
+    @keyframes ncSlideDown { from { transform: translateY(-100%); } to { transform: none; } }
     .nc-ios-banner span { font-size: .75rem; color: rgba(220,232,247,.85); line-height: 1.4; }
-    .nc-ios-banner a    { flex-shrink: 0; background: #e8a020; color: #000; font-weight: 700; padding: .35rem .8rem; border-radius: 6px; text-decoration: none; font-size: .75rem; white-space: nowrap; }
+    .nc-ios-banner a    { flex-shrink: 0; background: #e8a020; color: #000; font-weight: 700; padding: .35rem .8rem; border-radius: 8px; text-decoration: none; font-size: .75rem; }
+
+    /* ── Iframe ── */
+    #nc-wrap iframe { position: relative; z-index: 1; width: 100%; height: 100%; border: none; display: block; }
   `;
   document.head.appendChild(s);
-}
-
-/* ══════════════════════════════
-   AUTO-HIDE BARRE — géré manuellement
-   Fonctionne en mode normal ET en fullscreen
-══════════════════════════════ */
-var _plyrEl = null;  // référence à l'élément .plyr
-
-function showControls() {
-  if (!_plyrEl) return;
-  _plyrEl.classList.remove('nc-ctrl-hidden');
-  clearTimeout(_hideTimer);
-}
-
-function scheduleHide() {
-  if (!_plyrEl) return;
-  clearTimeout(_hideTimer);
-  // Ne pas cacher si en pause
-  if (_plyrPlayer && _plyrPlayer.paused) return;
-  _hideTimer = setTimeout(function() {
-    if (_plyrEl) _plyrEl.classList.add('nc-ctrl-hidden');
-  }, 4000); // 4 secondes d'inactivité
-}
-
-function onActivity() {
-  showControls();
-  scheduleHide();
-}
-
-function attachActivityListeners() {
-  // On écoute sur le document pour couvrir le fullscreen aussi
-  document.addEventListener('mousemove', onActivity, { passive: true });
-  document.addEventListener('touchstart', onActivity, { passive: true });
-  document.addEventListener('keydown', onActivity, { passive: true });
-  // Toujours montrer la barre en pause
-  if (_plyrPlayer) {
-    _plyrPlayer.on('pause', function() { showControls(); clearTimeout(_hideTimer); });
-    _plyrPlayer.on('play',  function() { scheduleHide(); });
-  }
-}
-
-function detachActivityListeners() {
-  document.removeEventListener('mousemove', onActivity);
-  document.removeEventListener('touchstart', onActivity);
-  document.removeEventListener('keydown', onActivity);
-  clearTimeout(_hideTimer);
-  _hideTimer = null;
 }
 
 /* ══════════════════════════════
    BULLES FLOTTANTES
 ══════════════════════════════ */
 function createBubbles(container) {
-  container.querySelectorAll('.nc-bubble').forEach(function(b){ b.remove(); });
-  var colors = ['rgba(232,160,32,.28)','rgba(192,57,43,.2)','rgba(220,232,247,.07)','rgba(46,204,113,.16)'];
-  var count  = IS_MOBILE ? 5 : 10;
-  for (var i = 0; i < count; i++) {
+  container.querySelectorAll('.nc-bbl').forEach(function(b){ b.remove(); });
+  var colors = ['rgba(232,160,32,.26)','rgba(192,57,43,.18)','rgba(220,232,247,.06)','rgba(46,204,113,.14)'];
+  var n = IS_MOBILE ? 5 : 10;
+  for (var i = 0; i < n; i++) {
     (function(){
-      var b   = document.createElement('div');
-      b.className = 'nc-bubble';
-      var sz  = 6 + Math.random() * 22;
-      var dur = 7 + Math.random() * 10;
+      var b  = document.createElement('div');
+      b.className = 'nc-bbl';
+      var sz = 6 + Math.random() * 22;
+      var dr = 8 + Math.random() * 10;
       b.style.cssText =
         'width:'+sz+'px;height:'+sz+'px;' +
         'left:'+(3+Math.random()*92)+'%;bottom:0;' +
         'background:'+colors[Math.floor(Math.random()*colors.length)]+';' +
-        'animation-duration:'+dur+'s;' +
-        'animation-delay:'+(-(Math.random()*dur))+'s;' +
-        'box-shadow:inset 0 0 '+(sz*.4)+'px rgba(255,255,255,.12);';
+        'animation-duration:'+dr+'s;' +
+        'animation-delay:'+(-(Math.random()*dr))+'s;' +
+        'box-shadow:inset 0 0 '+(sz*.35)+'px rgba(255,255,255,.1);';
       container.appendChild(b);
     })();
   }
+}
+
+/* ══════════════════════════════
+   AUTO-HIDE — écoute sur document
+   → fonctionne en fullscreen aussi
+══════════════════════════════ */
+function showCtrl() {
+  if (!_vjsEl) return;
+  _vjsEl.classList.remove('nc-hidden');
+  clearTimeout(_hideTimer);
+}
+function scheduleHide() {
+  if (!_vjsEl) return;
+  clearTimeout(_hideTimer);
+  if (_vjsPlayer && _vjsPlayer.paused()) return;
+  _hideTimer = setTimeout(function() {
+    if (_vjsEl) _vjsEl.classList.add('nc-hidden');
+  }, 4000);
+}
+function onActivity() { showCtrl(); scheduleHide(); }
+
+function attachActivity() {
+  document.addEventListener('mousemove',  onActivity, { passive: true });
+  document.addEventListener('touchstart', onActivity, { passive: true });
+  document.addEventListener('keydown',    onActivity, { passive: true });
+}
+function detachActivity() {
+  document.removeEventListener('mousemove',  onActivity);
+  document.removeEventListener('touchstart', onActivity);
+  document.removeEventListener('keydown',    onActivity);
+  clearTimeout(_hideTimer);
+}
+
+/* ══════════════════════════════
+   SVG ICÔNES
+══════════════════════════════ */
+var IC = {
+  play:  '<svg viewBox="0 0 24 24"><path d="M8 5.14v13.72L19 12 8 5.14z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>',
+  rew:   '<svg viewBox="0 0 24 24"><path d="M11.99 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="13.8" text-anchor="middle" font-size="5.5" font-family="DM Sans,sans-serif" font-weight="700" fill="currentColor">10</text></svg>',
+  fwd:   '<svg viewBox="0 0 24 24"><path d="M18 13c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6v4l5-5-5-5v4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8h-2z"/><text x="12" y="13.8" text-anchor="middle" font-size="5.5" font-family="DM Sans,sans-serif" font-weight="700" fill="currentColor">10</text></svg>',
+  volOn: '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>',
+  volOff:'<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>',
+  fsIn:  '<svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>',
+  fsOut: '<svg viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>',
+};
+
+/* ══════════════════════════════
+   CONSTRUIRE LA BARRE CUSTOM
+   (appelée dans _vjsPlayer.ready)
+══════════════════════════════ */
+function buildCustomControls(wrap) {
+  _vjsEl  = wrap.querySelector('.video-js');
+  _ctrlEl = _vjsEl ? _vjsEl.querySelector('.vjs-control-bar') : null;
+  if (!_ctrlEl) return;
+
+  // Vider complètement la barre native (on repart de zéro)
+  _ctrlEl.innerHTML = '';
+
+  /* ── Ligne 1 : barre de progression ── */
+  var prog = document.createElement('div');
+  prog.className = 'vjs-progress-control vjs-control';
+  prog.innerHTML =
+    '<div class="vjs-progress-holder vjs-slider vjs-slider-horizontal" role="slider" aria-label="Progress Bar">' +
+    '<div class="vjs-load-progress"></div>' +
+    '<div class="vjs-play-progress vjs-slider-bar"></div>' +
+    '</div>';
+  _ctrlEl.appendChild(prog);
+
+  // Relier la barre de progression native de VJS
+  // (VJS cherche .vjs-progress-control dans la control-bar, on le garde via classe)
+
+  /* ── Ligne 2 : boutons ── */
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+  function mkBtn(cls, html, title, onClick) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls;
+    b.title = title;
+    b.innerHTML = html;
+    b.addEventListener('click', function(e){ e.stopPropagation(); onClick(); });
+    return b;
+  }
+
+  // Play/Pause
+  var playBtn = mkBtn('nc-lg-btn nc-play', IC.play, 'Lecture/Pause', function(){ playerTogglePlay(); });
+  playBtn.id = 'nc-play-btn';
+
+  // -10s
+  var rewBtn  = mkBtn('nc-skip', IC.rew, 'Reculer 10s',  function(){ playerSkip(-10); });
+  // +10s
+  var fwdBtn  = mkBtn('nc-skip', IC.fwd, 'Avancer 10s',  function(){ playerSkip(10); });
+
+  // Temps
+  var timeEl = document.createElement('span');
+  timeEl.id = 'nc-time';
+  timeEl.style.cssText = 'color:rgba(255,255,255,.6);font-size:.74rem;font-weight:500;padding:0 4px;white-space:nowrap;';
+  timeEl.textContent = '0:00 / 0:00';
+
+  // Spacer
+  var sp = document.createElement('div');
+  sp.style.flex = '1';
+
+  // Volume
+  var volBtn = mkBtn('nc-lg-btn', IC.volOn, 'Muet', function(){ playerToggleMute(); });
+  volBtn.id = 'nc-vol-btn';
+
+  var volSlider = document.createElement('input');
+  volSlider.type = 'range'; volSlider.min = 0; volSlider.max = 1; volSlider.step = 0.05; volSlider.value = 1;
+  volSlider.style.cssText = 'width:58px;accent-color:#e8a020;cursor:pointer;';
+  volSlider.addEventListener('input', function(){ playerSetVol(this.value); });
+
+  // Vitesse — pill custom
+  var speedBtn = document.createElement('button');
+  speedBtn.type = 'button';
+  speedBtn.id = 'nc-speed-btn';
+  speedBtn.title = 'Vitesse';
+  speedBtn.style.cssText = 'background:rgba(255,255,255,.08);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.8);font-size:.72rem;font-weight:600;padding:0 10px;height:30px;border-radius:20px;cursor:pointer;transition:background .18s,border-color .18s;font-family:inherit;';
+  speedBtn.textContent = '1×';
+  var speeds = [0.5, 0.75, 1, 1.25, 1.5, 2]; var speedIdx = 2;
+  speedBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    speedIdx = (speedIdx + 1) % speeds.length;
+    var sp = speeds[speedIdx];
+    if (_vjsPlayer) _vjsPlayer.playbackRate(sp);
+    speedBtn.textContent = sp + '×';
+  });
+
+  // Fullscreen
+  var fsBtn = mkBtn('nc-lg-btn', IC.fsIn, 'Plein écran', function(){ playerToggleFS(); });
+  fsBtn.id = 'nc-fs-btn';
+
+  row.append(playBtn, rewBtn, fwdBtn, timeEl, sp, volBtn, volSlider, speedBtn, fsBtn);
+  _ctrlEl.appendChild(row);
+
+  /* ── Sync état play/pause ── */
+  if (_vjsPlayer) {
+    _vjsPlayer.on('play',  function(){ playBtn.innerHTML = IC.pause; });
+    _vjsPlayer.on('pause', function(){ playBtn.innerHTML = IC.play; showCtrl(); clearTimeout(_hideTimer); });
+    _vjsPlayer.on('ended', function(){ playBtn.innerHTML = IC.play; });
+
+    /* Sync temps */
+    _vjsPlayer.on('timeupdate', function(){
+      var cur = _vjsPlayer.currentTime(), dur = _vjsPlayer.duration();
+      if (isNaN(dur)) return;
+      var el = document.getElementById('nc-time');
+      if (el) el.textContent = fmtTime(cur) + ' / ' + fmtTime(dur);
+      // Mettre à jour la barre de progression native de VJS (elle gère pfill)
+    });
+
+    /* Sync mute */
+    _vjsPlayer.on('volumechange', function(){
+      var vb = document.getElementById('nc-vol-btn');
+      if (vb) vb.innerHTML = (_vjsPlayer.muted() || _vjsPlayer.volume() === 0) ? IC.volOff : IC.volOn;
+    });
+
+    /* Sync fullscreen icon */
+    _vjsPlayer.on('fullscreenchange', function(){
+      var fb = document.getElementById('nc-fs-btn');
+      if (fb) fb.innerHTML = _vjsPlayer.isFullscreen() ? IC.fsOut : IC.fsIn;
+    });
+  }
+}
+
+function fmtTime(s) {
+  s = Math.max(0, Math.floor(s));
+  var h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  if (h > 0) return h+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+  return m+':'+String(sec).padStart(2,'0');
 }
 
 /* ══════════════════════════════
@@ -276,227 +618,189 @@ function createBubbles(container) {
 async function checkVideoUrl(url) {
   if (/youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com/.test(url)) return { ok: true, type: 'embed' };
   try {
-    var res = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined });
-    var cd  = res.headers.get('content-disposition') || '';
-    var ct  = res.headers.get('content-type') || '';
-    if (cd.toLowerCase().includes('attachment')) return { ok: false, reason: 'download' };
-    if (ct && !ct.startsWith('video/') && !ct.includes('octet-stream') && !ct.includes('mp4') && !ct.includes('webm')) return { ok: false, reason: 'type' };
-    return { ok: true, type: 'direct' };
-  } catch(e) { return { ok: null, reason: 'cors' }; }
+    var res = await fetch(url, { method:'HEAD', signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined });
+    var cd = res.headers.get('content-disposition')||'', ct = res.headers.get('content-type')||'';
+    if (cd.toLowerCase().includes('attachment')) return { ok:false, reason:'download' };
+    if (ct && !ct.startsWith('video/') && !ct.includes('octet-stream') && !ct.includes('mp4') && !ct.includes('webm')) return { ok:false, reason:'type' };
+    return { ok:true };
+  } catch(e) { return { ok:null, reason:'cors' }; }
 }
 
 function videoType(url) {
   var e = url.split('.').pop().split('?')[0].toLowerCase();
-  return ({ mp4:'video/mp4', mkv:'video/x-matroska', mov:'video/quicktime', avi:'video/x-msvideo', webm:'video/webm', ogv:'video/ogg', m4v:'video/mp4', flv:'video/x-flv' })[e] || 'video/mp4';
+  return ({mp4:'video/mp4',mkv:'video/x-matroska',mov:'video/quicktime',avi:'video/x-msvideo',webm:'video/webm',ogv:'video/ogg',m4v:'video/mp4',flv:'video/x-flv'})[e]||'video/mp4';
 }
 
 /* ══════════════════════════════
-   BUILD PLAYER
+   BUILD PLAYER — entrée principale
 ══════════════════════════════ */
 async function buildPlayer(url, resumeAt) {
   var wrap = document.getElementById('player-wrap');
   _currentVideoUrl = url;
   resumeAt = resumeAt || 0;
 
-  detachActivityListeners();
-  if (_plyrPlayer) { try { _plyrPlayer.destroy(); } catch(e) {} _plyrPlayer = null; }
-  _vidElProxy = null;
-  _plyrEl     = null;
+  detachActivity();
+  if (_vjsPlayer) { try { _vjsPlayer.dispose(); } catch(e){} _vjsPlayer=null; }
+  _vjsEl=null; _ctrlEl=null; _vidElProxy=null;
   wrap.innerHTML = '';
 
   /* ── EMBEDS ── */
+  var embedHtml = null;
   if (/youtube\.com|youtu\.be/.test(url)) {
-    var id = (url.match(/(?:v=|youtu\.be\/)([^&?]+)/) || [])[1];
-    if (id) { wrap.innerHTML = '<div id="nc-player-container" style="aspect-ratio:16/9"><iframe src="https://www.youtube.com/embed/'+id+'?autoplay=1&start='+Math.floor(resumeAt)+'" allow="autoplay;fullscreen" allowfullscreen></iframe></div>'; createBubbles(wrap.querySelector('#nc-player-container')); }
-    return;
+    var id=(url.match(/(?:v=|youtu\.be\/)([^&?]+)/)||[])[1];
+    if (id) embedHtml='<iframe src="https://www.youtube.com/embed/'+id+'?autoplay=1&start='+Math.floor(resumeAt)+'" allow="autoplay;fullscreen" allowfullscreen></iframe>';
+  } else if (/vimeo\.com/.test(url)) {
+    var id=(url.match(/vimeo\.com\/(\d+)/)||[])[1];
+    if (id) embedHtml='<iframe src="https://player.vimeo.com/video/'+id+'?autoplay=1#t='+Math.floor(resumeAt)+'s" allow="autoplay;fullscreen" allowfullscreen></iframe>';
+  } else if (/dailymotion\.com/.test(url)) {
+    var id=(url.match(/dailymotion\.com\/video\/([^_?]+)/)||[])[1];
+    if (id) embedHtml='<iframe src="https://www.dailymotion.com/embed/video/'+id+'?autoplay=1&start='+Math.floor(resumeAt)+'" allow="autoplay;fullscreen" allowfullscreen></iframe>';
   }
-  if (/vimeo\.com/.test(url)) {
-    var id = (url.match(/vimeo\.com\/(\d+)/) || [])[1];
-    if (id) { wrap.innerHTML = '<div id="nc-player-container" style="aspect-ratio:16/9"><iframe src="https://player.vimeo.com/video/'+id+'?autoplay=1#t='+Math.floor(resumeAt)+'s" allow="autoplay;fullscreen" allowfullscreen></iframe></div>'; createBubbles(wrap.querySelector('#nc-player-container')); }
-    return;
-  }
-  if (/dailymotion\.com/.test(url)) {
-    var id = (url.match(/dailymotion\.com\/video\/([^_?]+)/) || [])[1];
-    if (id) { wrap.innerHTML = '<div id="nc-player-container" style="aspect-ratio:16/9"><iframe src="https://www.dailymotion.com/embed/video/'+id+'?autoplay=1&start='+Math.floor(resumeAt)+'" allow="autoplay;fullscreen" allowfullscreen></iframe></div>'; createBubbles(wrap.querySelector('#nc-player-container')); }
+  if (embedHtml) {
+    wrap.innerHTML='<div id="nc-wrap" style="aspect-ratio:16/9">'+embedHtml+'</div>';
+    createBubbles(wrap.querySelector('#nc-wrap'));
     return;
   }
 
-  showLoadingState(wrap);
+  wrap.innerHTML='<div id="nc-wrap" style="aspect-ratio:16/9"><div class="nc-loading"><div class="nc-spin"></div><span style="font-size:.85rem">Vérification du lien…</span></div></div>';
   var check = await checkVideoUrl(url);
-  if (check.ok === false) { showVideoFallback(wrap, url, check.reason); return; }
-  if (IS_IOS && check.ok === null) { await buildPlyrPlayer(wrap, url, resumeAt, true); return; }
-  await buildPlyrPlayer(wrap, url, resumeAt, false);
+  if (check.ok===false) { showFallback(wrap,url,check.reason); return; }
+  if (IS_IOS && check.ok===null) { await buildVjs(wrap,url,resumeAt,true); return; }
+  await buildVjs(wrap,url,resumeAt,false);
 }
 
-function showLoadingState(wrap) {
-  wrap.innerHTML = '<div id="nc-player-container" style="aspect-ratio:16/9"><div class="nc-loading"><div class="nc-loading-spinner"></div><span style="font-size:.85rem;">Vérification du lien…</span></div></div>';
+function showFallback(wrap,url,reason) {
+  var msg=reason==='download'?'Ce lien force le téléchargement et ne peut pas être lu directement.':'Ce lien ne semble pas pointer vers un fichier vidéo lisible.';
+  if (IS_MOBILE) msg=reason==='download'?'Ce lien force le téléchargement.\nUtilisez un lien mp4/webm direct ou YouTube, Vimeo, Dailymotion.':'Format non supporté sur mobile.';
+  wrap.innerHTML='<div id="nc-wrap" style="aspect-ratio:16/9"><div class="nc-fallback"><div class="nc-fallback-icon">⚠️</div><div class="nc-fallback-msg">'+msg.replace(/\n/g,'<br>')+'</div>'+(IS_MOBILE?'<a class="nc-fallback-btn" href="'+url+'">Ouvrir dans le navigateur</a>':'')+'<div class="nc-fallback-url">'+url+'</div></div></div>';
 }
-function showVideoFallback(wrap, url, reason) {
-  var msg = reason === 'download' ? 'Ce lien force le téléchargement et ne peut pas être lu directement.' : 'Ce lien ne semble pas pointer vers un fichier vidéo lisible.';
-  if (IS_MOBILE) msg = reason === 'download' ? 'Ce lien force le téléchargement.\nUtilisez un lien direct mp4/webm ou YouTube, Vimeo, Dailymotion.' : 'Format non supporté sur mobile.';
-  wrap.innerHTML = '<div id="nc-player-container" style="aspect-ratio:16/9"><div class="nc-fallback"><div class="nc-fallback-icon">⚠️</div><div class="nc-fallback-msg">'+msg.replace(/\n/g,'<br>')+'</div>'+(IS_MOBILE?'<a class="nc-fallback-btn" href="'+url+'">Ouvrir dans le navigateur</a>':'')+'<div class="nc-fallback-url">'+url+'</div></div></div>';
-}
+
 function showIosWarning(container) {
   if (container.querySelector('.nc-ios-banner')) return;
-  var b = document.createElement('div');
-  b.className = 'nc-ios-banner';
-  b.innerHTML = '<span>Si la vidéo ne charge pas, le lien n\'est peut-être pas compatible mobile.</span><a href="'+_currentVideoUrl+'">Ouvrir ↗</a>';
-  container.insertBefore(b, container.firstChild);
-  setTimeout(function(){ if (_plyrPlayer && _plyrPlayer.media.readyState >= 2) b.remove(); }, 7000);
+  var b=document.createElement('div'); b.className='nc-ios-banner';
+  b.innerHTML='<span>Si la vidéo ne charge pas, le lien n\'est peut-être pas compatible mobile.</span><a href="'+_currentVideoUrl+'">Ouvrir ↗</a>';
+  container.insertBefore(b,container.firstChild);
+  setTimeout(function(){ if(_vjsPlayer&&_vjsPlayer.readyState()>=2) b.remove(); },7000);
 }
 
 /* ══════════════════════════════
-   ICÔNES SVG — boutons skip 10s
+   BUILD VIDEO.JS
 ══════════════════════════════ */
-// Flèche reculer avec "10" intégré
-var SVG_REW = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="11.8" y="14" text-anchor="middle" font-size="5.8" font-family="DM Sans,Arial,sans-serif" font-weight="700" fill="currentColor">10</text></svg>';
-// Flèche avancer avec "10" intégré
-var SVG_FWD = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/><text x="12.2" y="14" text-anchor="middle" font-size="5.8" font-family="DM Sans,Arial,sans-serif" font-weight="700" fill="currentColor">10</text></svg>';
-
-/* ══════════════════════════════
-   BUILD PLYR
-══════════════════════════════ */
-async function buildPlyrPlayer(wrap, url, resumeAt, showIosHint) {
-  await loadPlyrAssets();
+async function buildVjs(wrap, url, resumeAt, showIosHint) {
+  await loadVjsAssets();
 
   wrap.innerHTML =
-    '<div id="nc-player-container" style="aspect-ratio:16/9">' +
-    '<video id="nc-plyr-el" playsinline preload="none">' +
+    '<div id="nc-wrap" style="aspect-ratio:16/9">' +
+    '<video id="nc-vjs-el" class="video-js" playsinline preload="none">' +
     '<source src="'+url+'" type="'+videoType(url)+'">' +
     '</video></div>';
 
-  var container = wrap.querySelector('#nc-player-container');
+  var container = wrap.querySelector('#nc-wrap');
   createBubbles(container);
 
-  _plyrPlayer = new Plyr('#nc-plyr-el', {
-    // ⚠️ PAS de 'rewind' / 'fast-forward' ici → on injecte nos boutons custom
-    controls: ['play-large', 'play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'fullscreen'],
-    settings: ['speed'],
-    speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
-    seekTime: 10,
-    autoplay: true,
-    keyboard: { focused: true, global: false }, // on gère les raccourcis nous-mêmes
-    tooltips: { controls: true, seek: true },
-    hideControls: false,  // ← désactivé, on gère manuellement
-    resetOnEnd: false,
-    invertTime: false,
-    toggleInvert: false,
+  _vjsPlayer = videojs('nc-vjs-el', {
+    controls:          true,
+    autoplay:          true,
+    preload:           'none',
+    fluid:             false,
+    playbackRates:     [0.5,0.75,1,1.25,1.5,2],
+    inactivityTimeout: 0,     // on gère l'auto-hide nous-mêmes
+    controlBar: {
+      children: [
+        'progressControl',
+        'playToggle',
+        'volumePanel',
+        'currentTimeDisplay','timeDivider','durationDisplay',
+        'playbackRateMenuButton',
+        'fullscreenToggle',
+      ],
+    },
+    userActions: { hotkeys: false, doubleClick: true },
+    nativeControlsForTouch: false,
   });
 
-  _plyrPlayer.on('ready', function() {
-    _plyrEl = wrap.querySelector('.plyr');
-    if (!_plyrEl) return;
+  _vjsPlayer.ready(function() {
+    buildCustomControls(wrap);
 
-    var ctrlBar = _plyrEl.querySelector('.plyr__controls');
-    if (!ctrlBar) return;
+    _vjsPlayer.one('loadedmetadata', function(){
+      if (resumeAt>0) _vjsPlayer.currentTime(resumeAt);
+    });
+    _vjsPlayer.play().catch(function(){});
 
-    // Bouton play dans la barre (pas le gros central)
-    var playBtn = ctrlBar.querySelector('[data-plyr="play"]');
-
-    // Créer bouton -10s
-    var btnRew = document.createElement('button');
-    btnRew.type = 'button';
-    btnRew.className = 'nc-skip-btn';
-    btnRew.title = 'Reculer 10s';
-    btnRew.innerHTML = SVG_REW;
-    btnRew.addEventListener('click', function(e) { e.stopPropagation(); if (_plyrPlayer) _plyrPlayer.rewind(10); });
-
-    // Créer bouton +10s
-    var btnFwd = document.createElement('button');
-    btnFwd.type = 'button';
-    btnFwd.className = 'nc-skip-btn';
-    btnFwd.title = 'Avancer 10s';
-    btnFwd.innerHTML = SVG_FWD;
-    btnFwd.addEventListener('click', function(e) { e.stopPropagation(); if (_plyrPlayer) _plyrPlayer.forward(10); });
-
-    // Insérer juste après le bouton play
-    if (playBtn) {
-      playBtn.after(btnRew);
-      btnRew.after(btnFwd);
-    } else {
-      ctrlBar.prepend(btnFwd);
-      ctrlBar.prepend(btnRew);
-    }
-
-    // Reprendre à la position sauvegardée
-    if (resumeAt > 0) {
-      _plyrPlayer.once('canplay', function() { _plyrPlayer.currentTime = resumeAt; });
-    }
-
-    // Lancer auto-hide manuel
-    attachActivityListeners();
+    // Auto-hide
+    attachActivity();
     scheduleHide();
   });
 
   /* Proxy vidEl */
   _vidElProxy = {
-    get currentTime() { return _plyrPlayer ? _plyrPlayer.currentTime    : 0; },
-    set currentTime(v){ if (_plyrPlayer) _plyrPlayer.currentTime = v; },
-    get duration()    { return _plyrPlayer ? _plyrPlayer.duration       : NaN; },
-    get paused()      { return _plyrPlayer ? _plyrPlayer.paused         : true; },
-    get readyState()  { return _plyrPlayer ? _plyrPlayer.media.readyState : 0; },
-    play:  function() { return _plyrPlayer ? _plyrPlayer.play()  : Promise.resolve(); },
-    pause: function() { if (_plyrPlayer) _plyrPlayer.pause(); },
+    get currentTime(){ return _vjsPlayer.currentTime(); },
+    set currentTime(v){ _vjsPlayer.currentTime(v); },
+    get duration()   { return _vjsPlayer.duration()||NaN; },
+    get paused()     { return _vjsPlayer.paused(); },
+    get readyState() { return _vjsPlayer.readyState(); },
+    play:  function(){ return _vjsPlayer.play(); },
+    pause: function(){ _vjsPlayer.pause(); },
   };
 
-  _plyrPlayer.on('error', function() {
-    var w2 = document.getElementById('player-wrap');
-    if (w2) showVideoFallback(w2, _currentVideoUrl, 'error');
+  _vjsPlayer.on('error', function(){
+    var w2=document.getElementById('player-wrap');
+    if (w2) showFallback(w2,_currentVideoUrl,'error');
   });
 
   if (IS_MOBILE) {
-    var _st = setTimeout(function() {
-      var c = wrap.querySelector('#nc-player-container');
-      if (c && _plyrPlayer && _plyrPlayer.media.readyState < 2) showIosWarning(c);
-    }, 8000);
-    _plyrPlayer.once('canplay',  function() { clearTimeout(_st); });
-    _plyrPlayer.once('playing',  function() { clearTimeout(_st); });
+    var _st=setTimeout(function(){
+      var c=wrap.querySelector('#nc-wrap');
+      if (c&&_vjsPlayer&&_vjsPlayer.readyState()<2) showIosWarning(c);
+    },8000);
+    _vjsPlayer.one('canplay', function(){ clearTimeout(_st); });
+    _vjsPlayer.one('playing', function(){ clearTimeout(_st); });
   }
-
-  if (showIosHint) {
-    setTimeout(function() {
-      var c = wrap.querySelector('#nc-player-container');
-      if (c) showIosWarning(c);
-    }, 600);
-  }
+  if (showIosHint) setTimeout(function(){ var c=wrap.querySelector('#nc-wrap'); if(c) showIosWarning(c); },600);
 }
 
 /* ══════════════════════════════
-   PROXY vidEl (pour saveProgress du site)
+   PROXY vidEl
 ══════════════════════════════ */
-var _vidElProxy = null;
-Object.defineProperty(window, 'vidEl', {
-  get: function() { return _plyrPlayer ? _vidElProxy : null; },
-  set: function()  {},
-  configurable: true,
+var _vidElProxy=null;
+Object.defineProperty(window,'vidEl',{
+  get:function(){ return _vjsPlayer?_vidElProxy:null; },
+  set:function(){},
+  configurable:true,
 });
 
 /* ══════════════════════════════
    API PUBLIQUE
 ══════════════════════════════ */
-function playerTogglePlay() { if (_plyrPlayer) _plyrPlayer.togglePlay(); }
-function playerSkip(s)      { if (_plyrPlayer) _plyrPlayer.currentTime = Math.max(0, _plyrPlayer.currentTime + s); }
-function playerSetVol(v)    { if (!_plyrPlayer) return; v = parseFloat(v); _plyrPlayer.volume = v; _plyrPlayer.muted = (v === 0); }
-function playerToggleMute() { if (_plyrPlayer) _plyrPlayer.toggleMute(); }
-function playerToggleFS()   { if (_plyrPlayer) _plyrPlayer.fullscreen.toggle(); }
-
-function playerKeydown(e) {
-  var tag = document.activeElement ? document.activeElement.tagName : '';
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-  if (e.key === ' ')          { e.preventDefault(); playerTogglePlay(); }
-  if (e.key === 'ArrowLeft')  { e.preventDefault(); playerSkip(-10); }
-  if (e.key === 'ArrowRight') { e.preventDefault(); playerSkip(10); }
-  if (e.key === 'ArrowUp')    { e.preventDefault(); playerSetVol(Math.min(1, (_plyrPlayer ? _plyrPlayer.volume : 1) + 0.1)); }
-  if (e.key === 'ArrowDown')  { e.preventDefault(); playerSetVol(Math.max(0, (_plyrPlayer ? _plyrPlayer.volume : 1) - 0.1)); }
-  if (e.key === 'f' || e.key === 'F') playerToggleFS();
-  if (e.key === 'm' || e.key === 'M') playerToggleMute();
+function playerTogglePlay(){
+  if (!_vjsPlayer) return;
+  _vjsPlayer.paused()?_vjsPlayer.play().catch(function(){}):_vjsPlayer.pause();
+}
+function playerSkip(s){ if(_vjsPlayer) _vjsPlayer.currentTime(Math.max(0,_vjsPlayer.currentTime()+s)); }
+function playerSetVol(v){ if(!_vjsPlayer) return; v=parseFloat(v); _vjsPlayer.volume(v); _vjsPlayer.muted(v===0); }
+function playerToggleMute(){ if(_vjsPlayer) _vjsPlayer.muted(!_vjsPlayer.muted()); }
+function playerToggleFS(){
+  if (!_vjsPlayer) return;
+  _vjsPlayer.isFullscreen()?_vjsPlayer.exitFullscreen():_vjsPlayer.requestFullscreen();
 }
 
-/* Stubs compat index.html / films.html / series.html */
-function updateProg() {}
-function togglePlay()  { playerTogglePlay(); }
-function skip(s)       { playerSkip(s); }
-function setVol(v)     { playerSetVol(v); }
-function toggleMute()  { playerToggleMute(); }
-function toggleFS()    { playerToggleFS(); }
-function seekV()       {}
+function playerKeydown(e){
+  var tag=document.activeElement?document.activeElement.tagName:'';
+  if(tag==='INPUT'||tag==='TEXTAREA') return;
+  if(e.key===' ')         {e.preventDefault();playerTogglePlay();}
+  if(e.key==='ArrowLeft') {e.preventDefault();playerSkip(-10);}
+  if(e.key==='ArrowRight'){e.preventDefault();playerSkip(10);}
+  if(e.key==='ArrowUp')   {e.preventDefault();playerSetVol(Math.min(1,(_vjsPlayer?_vjsPlayer.volume():1)+.1));}
+  if(e.key==='ArrowDown') {e.preventDefault();playerSetVol(Math.max(0,(_vjsPlayer?_vjsPlayer.volume():1)-.1));}
+  if(e.key==='f'||e.key==='F') playerToggleFS();
+  if(e.key==='m'||e.key==='M') playerToggleMute();
+}
+
+/* Stubs compat */
+function updateProg(){}
+function togglePlay() { playerTogglePlay(); }
+function skip(s)      { playerSkip(s); }
+function setVol(v)    { playerSetVol(v); }
+function toggleMute() { playerToggleMute(); }
+function toggleFS()   { playerToggleFS(); }
+function seekV()      {}
