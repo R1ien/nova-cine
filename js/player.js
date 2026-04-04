@@ -10,6 +10,7 @@ var _vjsPlayer  = null;
 var _mo         = null;
 var _ctrlEl     = null;
 var _isFs       = false;
+var _keepActiveInterval = null;
 
 var IS_IOS    = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 var IS_MOBILE = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -94,26 +95,26 @@ function injectTheme() {
       visibility: visible !important;
       opacity: 1 !important;
       pointer-events: auto !important;
+      /* PAS de transition ici — on la met uniquement sur nc-playing */
       transition: none !important;
       transform: none !important;
     }
 
     /* ─────────────────────────────────────────
-       AUTO-HIDE — CSS pur via pointer-events trick
-       En lecture : barre transparente sauf au hover
-       En pause   : toujours visible
+       AUTO-HIDE — CSS pur via :hover sur player-wrap
+       nc-playing = en lecture
+       La transition est sur la barre elle-même uniquement en lecture
     ───────────────────────────────────────── */
-
-    /* Player-wrap en lecture = on gère la visibilité */
     #player-wrap.nc-playing #nc-wrap .vjs-control-bar {
       opacity: 0 !important;
-      transition: opacity .3s ease !important;
+      /* Transition douce uniquement pour disparaître */
+      transition: opacity .4s ease 1.5s !important;
     }
-    /* Au hover sur player-wrap → barre visible */
     #player-wrap.nc-playing:hover #nc-wrap .vjs-control-bar {
       opacity: 1 !important;
+      /* Apparition instantanée au hover */
+      transition: opacity .15s ease !important;
     }
-    /* Curseur caché quand barre cachée */
     #player-wrap.nc-playing { cursor: none; }
     #player-wrap.nc-playing:hover { cursor: default; }
 
@@ -379,16 +380,22 @@ function setPlaying(playing) {
 }
 
 /* ══════════════════════════════
-   MutationObserver — bloque vjs-user-inactive
+   KEEP VJS TOUJOURS ACTIF
+   Au lieu de bloquer vjs-user-inactive après coup (glitch),
+   on dit à VJS que l'utilisateur est actif en permanence.
 ══════════════════════════════ */
-function blockVjsInactive(vjsEl) {
-  if (_mo) _mo.disconnect();
-  _mo = new MutationObserver(function() {
-    if (vjsEl.classList.contains('vjs-user-inactive')) {
-      vjsEl.classList.remove('vjs-user-inactive');
+var _keepActiveInterval = null;
+function keepVjsActive() {
+  if (_keepActiveInterval) clearInterval(_keepActiveInterval);
+  _keepActiveInterval = setInterval(function() {
+    if (_vjsPlayer && !_vjsPlayer.isDisposed()) {
+      try { _vjsPlayer.userActive(true); } catch(e) {}
     }
-  });
-  _mo.observe(vjsEl, { attributes: true, attributeFilter: ['class'] });
+  }, 500);
+}
+function stopKeepActive() {
+  if (_keepActiveInterval) { clearInterval(_keepActiveInterval); _keepActiveInterval = null; }
+  if (_mo) { _mo.disconnect(); _mo = null; }
 }
 
 /* ══════════════════════════════
@@ -465,6 +472,7 @@ async function buildPlayer(url, resumeAt) {
   _currentVideoUrl=url; resumeAt=resumeAt||0;
 
   if(_mo){_mo.disconnect();_mo=null;}
+  stopKeepActive();
   if(_vjsPlayer){try{_vjsPlayer.dispose();}catch(e){}_vjsPlayer=null;}
   _ctrlEl=null; _vidElProxy=null; _isFs=false;
   setPlaying(false);
@@ -531,7 +539,8 @@ async function buildVjs(wrap, url, resumeAt, showIosHint) {
   _vjsPlayer.ready(function(){
     var vjsEl=wrap.querySelector('.video-js');
     _ctrlEl=vjsEl?vjsEl.querySelector('.vjs-control-bar'):null;
-    if(vjsEl) blockVjsInactive(vjsEl);
+    /* Garder VJS toujours actif → pas de vjs-user-inactive */
+    keepVjsActive();
     injectCustomButtons();
 
     _vjsPlayer.one('loadedmetadata',function(){ if(resumeAt>0)_vjsPlayer.currentTime(resumeAt); });
