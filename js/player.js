@@ -685,6 +685,21 @@ async function buildVjs(wrap,url,resumeAt,showIosHint) {
     _vjsPlayer.on('play',  function(){ setPlaying(true); });
     _vjsPlayer.on('pause', function(){ setPlaying(false); });
     _vjsPlayer.on('ended', function(){ setPlaying(false); });
+
+    /* Simuler pause + reprise au premier chargement pour initialiser
+       correctement les classes nc-playing et _fsLastMove */
+    _vjsPlayer.one('canplay', function() {
+      setTimeout(function() {
+        if (!_vjsPlayer) return;
+        _vjsPlayer.pause();
+        setTimeout(function() {
+          if (!_vjsPlayer) return;
+          _vjsPlayer.play().catch(function(){});
+          /* Forcer _fsShowBar au cas où on est déjà en fullscreen */
+          _fsShowBar();
+        }, 80);
+      }, 120);
+    });
   });
 
   _vidElProxy={
