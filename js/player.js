@@ -466,7 +466,19 @@ function createBubbles(container) {
 ══════════════════════════════ */
 function setPlaying(v) {
   var pw = document.getElementById('player-wrap');
-  if (pw) pw.classList.toggle('nc-playing', v);
+  if (!pw) return;
+  pw.classList.toggle('nc-playing', v);
+  /* En fullscreen : quand on reprend la lecture, montrer la barre brièvement */
+  if (v && _isFs) {
+    pw.classList.add('nc-fs-active');
+    clearTimeout(_fsHideTimer);
+    _schedFsHide(pw);
+  }
+  /* En pause en fullscreen : toujours montrer */
+  if (!v && _isFs) {
+    pw.classList.add('nc-fs-active');
+    clearTimeout(_fsHideTimer);
+  }
 }
 
 /* ══════════════════════════════
@@ -485,16 +497,17 @@ function setupFsListener() {
     if (!pw) return;
 
     if (_isFs) {
-      /* En fullscreen : montrer la barre au départ, puis auto-hide */
-      pw.addEventListener('mousemove', _onFsMove);
-      pw.addEventListener('touchstart', _onFsMove);
-      /* Montrer immédiatement au début */
+      /* Écouter sur document — plus fiable que player-wrap en fullscreen */
+      document.addEventListener('mousemove',  _onFsMove);
+      document.addEventListener('touchstart', _onFsMove, { passive: true });
+      document.addEventListener('keydown',    _onFsMove);
+      /* Montrer immédiatement */
       pw.classList.add('nc-fs-active');
       _schedFsHide(pw);
     } else {
-      /* Sortie fullscreen : nettoyer tout */
-      pw.removeEventListener('mousemove', _onFsMove);
-      pw.removeEventListener('touchstart', _onFsMove);
+      document.removeEventListener('mousemove',  _onFsMove);
+      document.removeEventListener('touchstart', _onFsMove);
+      document.removeEventListener('keydown',    _onFsMove);
       clearTimeout(_fsHideTimer);
       pw.classList.remove('nc-fs-active');
     }
@@ -515,8 +528,10 @@ function _onFsMove() {
 function _schedFsHide(pw) {
   _fsHideTimer = setTimeout(function() {
     if (!_isFs) return;
-    /* Retirer nc-fs-active → CSS cache la barre */
-    pw.classList.remove('nc-fs-active');
+    /* Ne cacher que si en lecture — en pause la barre reste toujours visible */
+    if (pw.classList.contains('nc-playing')) {
+      pw.classList.remove('nc-fs-active');
+    }
   }, 3000);
 }
 
