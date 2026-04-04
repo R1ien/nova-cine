@@ -11,7 +11,6 @@
 var _currentVideoUrl = '';
 var _vjsPlayer       = null;
 var _ctrlEl          = null;
-var _isFs            = false;
 
 var IS_IOS    = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 var IS_MOBILE = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -467,71 +466,92 @@ function setPlaying(v) {
   var pw = document.getElementById('player-wrap');
   if (!pw) return;
   pw.classList.toggle('nc-playing', v);
-  /* En fullscreen : quand on reprend la lecture, montrer la barre brièvement */
-  if (v && _isFs) {
-    pw.classList.add('nc-fs-active');
-    clearTimeout(_fsHideTimer);
-    _schedFsHide(pw);
-  }
-  /* En pause en fullscreen : toujours montrer */
-  if (!v && _isFs) {
-    pw.classList.add('nc-fs-active');
-    clearTimeout(_fsHideTimer);
-  }
+  /* En fullscreen : chaque changement play/pause réactive la barre */
+  if (_isFs) _fsShowBar();
 }
 
 /* ══════════════════════════════
-   FULLSCREEN
+   FULLSCREEN — logique simplifiée
+   On track la position de la souris via setInterval.
+   Pas de :fullscreen CSS, pas de listeners complexes.
 ══════════════════════════════ */
-var _fsHideTimer = null;
+var _isFs        = false;
+var _fsMouseX    = -1;
+var _fsMouseY    = -1;
+var _fsLastMove  = 0;
+var _fsInterval  = null;
+var _fsBarVisible = false;
 
-function setupFsListener() {
-  var handler = function() {
-    var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
-    _isFs = !!fsEl;
-    var btn = document.getElementById('nc-fs-btn');
-    if (btn) btn.innerHTML = _isFs ? SVG_FS_OUT : SVG_FS_IN;
-
-    var pw = document.getElementById('player-wrap');
-    if (!pw) return;
-
-    if (_isFs) {
-      pw.classList.add('nc-fs');           /* CSS sait qu'on est en FS */
-      pw.classList.add('nc-fs-active');    /* Barre visible au départ */
-      document.addEventListener('mousemove',  _onFsMove);
-      document.addEventListener('touchstart', _onFsMove, { passive: true });
-      document.addEventListener('keydown',    _onFsMove);
-      _schedFsHide(pw);
-    } else {
-      pw.classList.remove('nc-fs');
-      pw.classList.remove('nc-fs-active');
-      document.removeEventListener('mousemove',  _onFsMove);
-      document.removeEventListener('touchstart', _onFsMove);
-      document.removeEventListener('keydown',    _onFsMove);
-      clearTimeout(_fsHideTimer);
-    }
-  };
-  document.addEventListener('fullscreenchange',       handler);
-  document.addEventListener('webkitfullscreenchange', handler);
-}
-
-function _onFsMove() {
+function _fsShowBar() {
   var pw = document.getElementById('player-wrap');
   if (!pw) return;
-  /* Ajouter nc-fs-active → CSS affiche la barre avec !important */
-  pw.classList.add('nc-fs-active');
-  clearTimeout(_fsHideTimer);
-  _schedFsHide(pw);
+  _fsLastMove = Date.now();
+  if (!_fsBarVisible) {
+    pw.classList.add('nc-fs-active');
+    _fsBarVisible = true;
+  }
 }
 
-function _schedFsHide(pw) {
-  _fsHideTimer = setTimeout(function() {
+function _fsHideBar() {
+  var pw = document.getElementById('player-wrap');
+  if (!pw) return;
+  /* Ne cacher que si en lecture */
+  if (pw.classList.contains('nc-playing')) {
+    pw.classList.remove('nc-fs-active');
+    _fsBarVisible = false;
+  }
+}
+
+function setupFsListener() {
+  /* Un seul listener global — pas d'accumulation */
+  if (setupFsListener._done) return;
+  setupFsListener._done = true;
+
+  document.addEventListener('fullscreenchange',       _onFsChange);
+  document.addEventListener('webkitfullscreenchange', _onFsChange);
+
+  /* Tracker la position souris globalement */
+  document.addEventListener('mousemove', function(e) {
     if (!_isFs) return;
-    /* Ne cacher que si en lecture — en pause la barre reste toujours visible */
-    if (pw.classList.contains('nc-playing')) {
-      pw.classList.remove('nc-fs-active');
+    if (e.clientX !== _fsMouseX || e.clientY !== _fsMouseY) {
+      _fsMouseX = e.clientX;
+      _fsMouseY = e.clientY;
+      _fsShowBar();
     }
-  }, 3000);
+  });
+  document.addEventListener('touchstart', function() {
+    if (_isFs) _fsShowBar();
+  }, { passive: true });
+  document.addEventListener('keydown', function() {
+    if (_isFs) _fsShowBar();
+  });
+}
+
+function _onFsChange() {
+  var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+  _isFs = !!fsEl;
+  var btn = document.getElementById('nc-fs-btn');
+  if (btn) btn.innerHTML = _isFs ? SVG_FS_OUT : SVG_FS_IN;
+  var pw = document.getElementById('player-wrap');
+  if (!pw) return;
+
+  if (_isFs) {
+    pw.classList.add('nc-fs');
+    _fsBarVisible = false;
+    _fsShowBar(); /* Montrer au départ */
+    /* Vérifier toutes les 500ms si la barre doit se cacher */
+    clearInterval(_fsInterval);
+    _fsInterval = setInterval(function() {
+      if (!_isFs) { clearInterval(_fsInterval); return; }
+      var idle = Date.now() - _fsLastMove;
+      if (idle > 3000) _fsHideBar();
+    }, 500);
+  } else {
+    clearInterval(_fsInterval);
+    pw.classList.remove('nc-fs');
+    pw.classList.remove('nc-fs-active');
+    _fsBarVisible = false;
+  }
 }
 
 /* ══════════════════════════════
