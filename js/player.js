@@ -183,6 +183,20 @@ function injectTheme() {
     /* Curseur */
     #player-wrap.nc-playing { cursor: none; }
     #player-wrap.nc-playing:hover { cursor: default; }
+
+    /* ── En fullscreen : le JS gère tout (cursor + barre)
+       On désactive le :hover CSS qui ne fonctionne pas bien
+       quand la souris est immobile ── */
+    #player-wrap:-webkit-full-screen.nc-playing .vjs-control-bar,
+    #player-wrap:fullscreen.nc-playing .vjs-control-bar {
+      /* JS override via style inline — pas de règle CSS qui interfère */
+      transition: opacity .25s ease !important;
+    }
+    #player-wrap:-webkit-full-screen.nc-playing:hover .vjs-control-bar,
+    #player-wrap:fullscreen.nc-playing:hover .vjs-control-bar {
+      /* Laisser le JS gérer — pas de override hover en fullscreen */
+      opacity: inherit !important;
+    }
     /* Mobile : toujours visible */
     @media (max-width: 640px) {
       #player-wrap.nc-playing .vjs-control-bar {
@@ -345,9 +359,44 @@ function injectTheme() {
     #player-wrap .vjs-loading-spinner::before, #player-wrap .vjs-loading-spinner::after { border-top-color: #e8a020 !important; }
 
     /* ── Fullscreen natif sur player-wrap ── */
-    #player-wrap:-webkit-full-screen { background:#000 !important; width:100vw !important; height:100vh !important; max-width:none !important; aspect-ratio:unset !important; }
-    #player-wrap:fullscreen           { background:#000 !important; width:100vw !important; height:100vh !important; max-width:none !important; aspect-ratio:unset !important; }
-    #player-wrap:-webkit-full-screen #nc-wrap, #player-wrap:fullscreen #nc-wrap { width:100% !important; height:100% !important; aspect-ratio:unset !important; }
+    #player-wrap:-webkit-full-screen {
+      background: #000 !important;
+      width: 100vw !important; height: 100vh !important;
+      max-width: none !important; aspect-ratio: unset !important;
+      position: fixed !important; inset: 0 !important;
+    }
+    #player-wrap:fullscreen {
+      background: #000 !important;
+      width: 100vw !important; height: 100vh !important;
+      max-width: none !important; aspect-ratio: unset !important;
+      position: fixed !important; inset: 0 !important;
+    }
+    /* nc-wrap prend tout l'espace dispo en fullscreen */
+    #player-wrap:-webkit-full-screen #nc-wrap,
+    #player-wrap:fullscreen           #nc-wrap {
+      width: 100% !important; height: 100% !important;
+      aspect-ratio: unset !important;
+      position: absolute !important; inset: 0 !important;
+    }
+    /* video-js aussi */
+    #player-wrap:-webkit-full-screen .video-js,
+    #player-wrap:fullscreen           .video-js {
+      width: 100% !important; height: 100% !important;
+      aspect-ratio: unset !important;
+      position: absolute !important; inset: 0 !important;
+    }
+    /* La control-bar reste collée au bas de player-wrap (100vh) */
+    #player-wrap:-webkit-full-screen .vjs-control-bar,
+    #player-wrap:fullscreen           .vjs-control-bar {
+      position: fixed !important;
+      bottom: 0 !important; left: 0 !important; right: 0 !important;
+      z-index: 2147483647 !important;
+    }
+    /* Pas d'animation de bulles qui glitchent en fullscreen */
+    #player-wrap:-webkit-full-screen .nc-bbl,
+    #player-wrap:fullscreen           .nc-bbl {
+      display: none !important;
+    }
 
     /* Fond modal noir */
     .player-modal { background: #000 !important; }
@@ -408,15 +457,57 @@ function setPlaying(v) {
 /* ══════════════════════════════
    FULLSCREEN
 ══════════════════════════════ */
+var _fsHideTimer = null;
+
 function setupFsListener() {
   var handler = function() {
     var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
     _isFs = !!fsEl;
     var btn = document.getElementById('nc-fs-btn');
     if (btn) btn.innerHTML = _isFs ? SVG_FS_OUT : SVG_FS_IN;
+
+    var pw = document.getElementById('player-wrap');
+    if (!pw) return;
+
+    if (_isFs) {
+      /* En fullscreen : auto-hide souris + barre après 3s */
+      pw.addEventListener('mousemove', _onFsMove);
+      pw.addEventListener('touchstart', _onFsMove);
+      _schedFsHide(pw);
+    } else {
+      /* Sortie fullscreen : nettoyer */
+      pw.removeEventListener('mousemove', _onFsMove);
+      pw.removeEventListener('touchstart', _onFsMove);
+      clearTimeout(_fsHideTimer);
+      /* Remettre le curseur et la classe proprement */
+      pw.style.cursor = '';
+    }
   };
   document.addEventListener('fullscreenchange',       handler);
   document.addEventListener('webkitfullscreenchange', handler);
+}
+
+function _onFsMove() {
+  var pw = document.getElementById('player-wrap');
+  if (!pw) return;
+  pw.style.cursor = 'default';
+  /* Forcer la barre visible pendant le mouvement */
+  var bar = pw.querySelector('.vjs-control-bar');
+  if (bar) { bar.style.opacity = '1'; bar.style.pointerEvents = 'auto'; }
+  clearTimeout(_fsHideTimer);
+  _schedFsHide(pw);
+}
+
+function _schedFsHide(pw) {
+  _fsHideTimer = setTimeout(function() {
+    if (!_isFs) return;
+    pw.style.cursor = 'none';
+    /* Cacher la barre seulement si en lecture */
+    if (pw.classList.contains('nc-playing')) {
+      var bar = pw.querySelector('.vjs-control-bar');
+      if (bar) { bar.style.opacity = ''; bar.style.pointerEvents = ''; }
+    }
+  }, 3000);
 }
 
 /* ══════════════════════════════
@@ -589,8 +680,22 @@ function playerToggleMute(){if(_vjsPlayer)_vjsPlayer.muted(!_vjsPlayer.muted());
 function playerToggleFS(){
   if(IS_IOS){var vid=document.getElementById('nc-vjs-el');if(vid&&vid.webkitEnterFullscreen)vid.webkitEnterFullscreen();return;}
   var pw=document.getElementById('player-wrap');if(!pw)return;
-  if(_isFs){if(document.exitFullscreen)document.exitFullscreen();else if(document.webkitExitFullscreen)document.webkitExitFullscreen();}
-  else{if(pw.requestFullscreen)pw.requestFullscreen();else if(pw.webkitRequestFullscreen)pw.webkitRequestFullscreen();}
+
+  /* Stopper les animations de bulles pendant la transition fullscreen
+     pour éviter le glitch de repaint */
+  var bubbles=pw.querySelectorAll('.nc-bbl');
+  bubbles.forEach(function(b){b.style.animationPlayState='paused';});
+  setTimeout(function(){
+    bubbles.forEach(function(b){b.style.animationPlayState='';});
+  },600);
+
+  if(_isFs){
+    if(document.exitFullscreen)document.exitFullscreen();
+    else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+  } else {
+    if(pw.requestFullscreen)pw.requestFullscreen();
+    else if(pw.webkitRequestFullscreen)pw.webkitRequestFullscreen();
+  }
 }
 
 function playerKeydown(e){
