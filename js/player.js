@@ -1,101 +1,52 @@
 /* ═══════════════════════════════════════════
-   NovaCiné — player.js  (Vidstack)
-   Lecteur Vidstack via CDN + Default Layout
-   Embeds YouTube / Vimeo / Dailymotion via iframe
+   NovaCiné — player.js  (Vidstack 1.x CDN)
    ═══════════════════════════════════════════ */
 
 var _currentVideoUrl = '';
-var _vstPlayer       = null;   // instance VidstackPlayer
+var _player          = null;   // <media-player> element
 
 var IS_IOS    = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 var IS_MOBILE = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-/* ══════════════════════════════
-   CHARGEMENT VIDSTACK (lazy)
-══════════════════════════════ */
-var _vstLoaded = false;
-
-function loadVidstackAssets() {
+/* ─── Attendre que Vidstack soit prêt ─── */
+function waitForVidstack() {
   return new Promise(function(resolve) {
-    if (_vstLoaded && typeof VidstackPlayer !== 'undefined') { resolve(); return; }
-
-    var BASE = 'https://cdn.vidstack.io/player';
-
-    // CSS theme
-    if (!document.getElementById('vst-theme')) {
-      ['base','default'].forEach(function(name) {
-        var l = document.createElement('link');
-        l.id = 'vst-' + name;
-        l.rel = 'stylesheet';
-        l.href = BASE + '/' + name + '.css';
-        document.head.appendChild(l);
-      });
-    }
-
-    // JS bundle
-    if (!document.getElementById('vst-js')) {
-      var sc = document.createElement('script');
-      sc.id   = 'vst-js';
-      sc.type = 'module';
-      sc.textContent =
-        'import { VidstackPlayer, VidstackPlayerLayout } from "' + BASE + '/index.js";' +
-        'window.VidstackPlayer = VidstackPlayer;' +
-        'window.VidstackPlayerLayout = VidstackPlayerLayout;' +
-        'window.dispatchEvent(new Event("vidstack-ready"));';
-      document.head.appendChild(sc);
-
-      window.addEventListener('vidstack-ready', function() {
-        _vstLoaded = true;
-        resolve();
-      }, { once: true });
-    } else {
-      var wait = setInterval(function() {
-        if (typeof VidstackPlayer !== 'undefined') {
-          clearInterval(wait);
-          _vstLoaded = true;
-          resolve();
-        }
-      }, 50);
-    }
+    // Le bundle CDN de Vidstack enregistre les custom elements dès le chargement
+    // On attend que <media-player> soit défini
+    if (customElements.get('media-player')) { resolve(); return; }
+    customElements.whenDefined('media-player').then(resolve);
   });
 }
 
-/* ══════════════════════════════
-   AFFICHAGE LOADING / FALLBACK
-══════════════════════════════ */
+/* ─── Fallback / Spinner ─── */
 function showSpinner(wrap) {
   wrap.innerHTML =
     '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;' +
-    'height:100%;aspect-ratio:16/9;background:#000;gap:1rem;color:rgba(220,232,247,.7);' +
-    'font-family:\'DM Sans\',sans-serif;">' +
+    'aspect-ratio:16/9;background:#000;gap:1rem;color:rgba(220,232,247,.65);font-family:\'DM Sans\',sans-serif;">' +
     '<div style="width:38px;height:38px;border:3px solid rgba(255,255,255,.1);' +
     'border-top-color:#e8a020;border-radius:50%;animation:ncSpin .8s linear infinite;"></div>' +
-    '<span style="font-size:.84rem;">Chargement…</span>' +
-    '</div>' +
-    '<style>@keyframes ncSpin{to{transform:rotate(360deg)}}</style>';
+    '<span style="font-size:.82rem;">Chargement du lecteur…</span>' +
+    '</div><style>@keyframes ncSpin{to{transform:rotate(360deg)}}</style>';
 }
 
 function showFallback(wrap, url, reason) {
-  var msgs = {
-    download: 'Ce lien force le téléchargement et ne peut pas être lu directement.<br>Utilisez un lien mp4/webm direct, ou YouTube, Vimeo, Dailymotion.',
-    type:     'Ce lien ne pointe pas vers un fichier vidéo lisible.',
-    error:    'Impossible de lire cette vidéo. Le lien est peut-être inaccessible ou dans un format non supporté.',
-  };
+  var msg = {
+    download: 'Ce lien force le téléchargement.<br>Utilisez un lien mp4/webm direct, ou YouTube, Vimeo, Dailymotion.',
+    type    : 'Ce lien ne pointe pas vers un fichier vidéo lisible.',
+    error   : 'Impossible de lire cette vidéo. Le lien est peut-être inaccessible ou le format non supporté.',
+  }[reason] || 'Impossible de lire cette vidéo.';
+
   wrap.innerHTML =
     '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;' +
-    'height:100%;aspect-ratio:16/9;background:#000;gap:1.2rem;padding:2rem;text-align:center;' +
+    'aspect-ratio:16/9;background:#000;gap:1.1rem;padding:2rem;text-align:center;' +
     'font-family:\'DM Sans\',sans-serif;">' +
-    '<div style="font-size:2.5rem;">📽️</div>' +
-    '<div style="color:rgba(220,232,247,.85);font-size:.88rem;line-height:1.65;max-width:360px;">' +
-    (msgs[reason] || msgs.error) + '</div>' +
-    '<div style="color:rgba(220,232,247,.28);font-size:.7rem;word-break:break-all;max-width:320px;">' +
-    url + '</div>' +
+    '<div style="font-size:2.4rem;">📽️</div>' +
+    '<div style="color:rgba(220,232,247,.85);font-size:.88rem;line-height:1.65;max-width:360px;">' + msg + '</div>' +
+    '<div style="color:rgba(220,232,247,.25);font-size:.68rem;word-break:break-all;max-width:320px;">' + url + '</div>' +
     '</div>';
 }
 
-/* ══════════════════════════════
-   VÉRIFICATION DU LIEN
-══════════════════════════════ */
+/* ─── Vérification du lien ─── */
 function isEmbed(url) {
   return /youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com/.test(url);
 }
@@ -114,14 +65,10 @@ async function checkVideoUrl(url) {
         !ct.includes('mp4') && !ct.includes('webm') && !ct.includes('mpegurl'))
       return { ok: false, reason: 'type' };
     return { ok: true };
-  } catch(e) {
-    return { ok: null };
-  }
+  } catch(e) { return { ok: null }; }
 }
 
-/* ══════════════════════════════
-   BUILD PLAYER
-══════════════════════════════ */
+/* ─── BUILD PLAYER ─── */
 async function buildPlayer(url, resumeAt) {
   _currentVideoUrl = url;
   resumeAt = resumeAt || 0;
@@ -129,123 +76,103 @@ async function buildPlayer(url, resumeAt) {
   var wrap = document.getElementById('player-wrap');
   if (!wrap) return;
 
-  // Détruire l'instance précédente
-  if (_vstPlayer) {
-    try { _vstPlayer.destroy(); } catch(e) {}
-    _vstPlayer = null;
-  }
+  // Nettoyer l'instance précédente
+  _player = null;
   wrap.innerHTML = '';
 
-  /* ── EMBEDS ── */
+  /* ── Embeds ── */
+  function embedHtml(src) {
+    return '<div style="aspect-ratio:16/9;background:#000;">' +
+      '<iframe style="width:100%;height:100%;border:none;display:block;" ' +
+      'src="' + src + '" allow="autoplay;fullscreen" allowfullscreen></iframe></div>';
+  }
+
   if (/youtube\.com|youtu\.be/.test(url)) {
     var id = (url.match(/(?:v=|youtu\.be\/)([^&?]+)/) || [])[1];
-    if (id) wrap.innerHTML =
-      '<div style="aspect-ratio:16/9;background:#000;">' +
-      '<iframe style="width:100%;height:100%;border:none;display:block;" ' +
-      'src="https://www.youtube.com/embed/' + id + '?autoplay=1&start=' + Math.floor(resumeAt) + '" ' +
-      'allow="autoplay;fullscreen" allowfullscreen></iframe></div>';
+    if (id) wrap.innerHTML = embedHtml('https://www.youtube.com/embed/' + id + '?autoplay=1&start=' + Math.floor(resumeAt));
     return;
   }
   if (/vimeo\.com/.test(url)) {
     var id = (url.match(/vimeo\.com\/(\d+)/) || [])[1];
-    if (id) wrap.innerHTML =
-      '<div style="aspect-ratio:16/9;background:#000;">' +
-      '<iframe style="width:100%;height:100%;border:none;display:block;" ' +
-      'src="https://player.vimeo.com/video/' + id + '?autoplay=1#t=' + Math.floor(resumeAt) + 's" ' +
-      'allow="autoplay;fullscreen" allowfullscreen></iframe></div>';
+    if (id) wrap.innerHTML = embedHtml('https://player.vimeo.com/video/' + id + '?autoplay=1#t=' + Math.floor(resumeAt) + 's');
     return;
   }
   if (/dailymotion\.com/.test(url)) {
     var id = (url.match(/dailymotion\.com\/video\/([^_?]+)/) || [])[1];
-    if (id) wrap.innerHTML =
-      '<div style="aspect-ratio:16/9;background:#000;">' +
-      '<iframe style="width:100%;height:100%;border:none;display:block;" ' +
-      'src="https://www.dailymotion.com/embed/video/' + id + '?autoplay=1&start=' + Math.floor(resumeAt) + '" ' +
-      'allow="autoplay;fullscreen" allowfullscreen></iframe></div>';
+    if (id) wrap.innerHTML = embedHtml('https://www.dailymotion.com/embed/video/' + id + '?autoplay=1&start=' + Math.floor(resumeAt));
     return;
   }
 
-  /* ── VÉRIFICATION ── */
+  /* ── Vérification réseau ── */
   showSpinner(wrap);
   var check = await checkVideoUrl(url);
   if (check.ok === false) { showFallback(wrap, url, check.reason); return; }
 
-  /* ── VIDSTACK ── */
-  await loadVidstackAssets();
-
-  wrap.innerHTML = '';
-  // Conteneur cible pour Vidstack
-  var target = document.createElement('div');
-  target.id = 'vst-target';
-  wrap.appendChild(target);
-
+  /* ── Attendre Vidstack ── */
   try {
-    _vstPlayer = await VidstackPlayer.create({
-      target: target,
-      src:    url,
-      title:  '',
-      autoplay: true,
-      playsinline: true,
-      load: 'eager',
-      layout: new VidstackPlayerLayout(),
-    });
-
-    // Reprendre à la position sauvegardée
-    if (resumeAt > 0) {
-      _vstPlayer.subscribe(function(s) {
-        if (s.canPlay && !_vstPlayer._seeked) {
-          _vstPlayer._seeked = true;
-          _vstPlayer.currentTime = resumeAt;
-        }
-      });
-    }
-
-    // Erreur de lecture
-    _vstPlayer.listen('error', function() {
-      showFallback(wrap, url, 'error');
-    });
-
+    await Promise.race([
+      waitForVidstack(),
+      new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 8000); })
+    ]);
   } catch(e) {
     showFallback(wrap, url, 'error');
+    return;
   }
+
+  /* ── Créer le lecteur via Web Components ── */
+  wrap.innerHTML = '';
+
+  // Créer <media-player>
+  var player = document.createElement('media-player');
+  player.setAttribute('src', url);
+  player.setAttribute('autoplay', '');
+  player.setAttribute('playsinline', '');
+  player.style.width  = '100%';
+  player.style.height = '100%';
+  player.style.display = 'block';
+
+  // Créer <media-provider>
+  var provider = document.createElement('media-provider');
+  player.appendChild(provider);
+
+  // Créer le Default Layout vidéo
+  var layout = document.createElement('media-video-layout');
+  player.appendChild(layout);
+
+  wrap.appendChild(player);
+  _player = player;
+
+  // Reprendre à la position sauvegardée
+  if (resumeAt > 0) {
+    player.addEventListener('can-play', function handler() {
+      player.removeEventListener('can-play', handler);
+      player.currentTime = resumeAt;
+    });
+  }
+
+  // Erreur
+  player.addEventListener('error', function() {
+    showFallback(wrap, url, 'error');
+  });
 }
 
-/* ══════════════════════════════
-   API PUBLIQUE (compatibilité avec les pages existantes)
-══════════════════════════════ */
-function playerCurrentTime() {
-  return _vstPlayer ? _vstPlayer.currentTime : 0;
-}
-function playerDuration() {
-  return _vstPlayer ? _vstPlayer.duration : 0;
-}
-function playerDispose() {
-  if (_vstPlayer) {
-    try { _vstPlayer.destroy(); } catch(e) {}
-    _vstPlayer = null;
-  }
-}
+/* ─── API PUBLIQUE ─── */
+function playerCurrentTime() { return _player ? _player.currentTime : 0; }
+function playerDuration()    { return _player ? _player.duration    : 0; }
+function playerDispose()     { _player = null; }
 
-// Stubs pour compatibilité avec les appels existants dans les pages
-function playerTogglePlay()  { if (_vstPlayer) _vstPlayer.paused ? _vstPlayer.play() : _vstPlayer.pause(); }
-function playerSkip(s)       { if (_vstPlayer) _vstPlayer.currentTime = Math.max(0, _vstPlayer.currentTime + s); }
-function playerSetVol(v)     { if (_vstPlayer) { _vstPlayer.volume = parseFloat(v); _vstPlayer.muted = (v == 0); } }
-function playerToggleMute()  { if (_vstPlayer) _vstPlayer.muted = !_vstPlayer.muted; }
-function playerToggleFS()    {
-  if (!_vstPlayer) return;
-  if (IS_IOS) { var v = document.querySelector('#vst-target video'); if (v && v.webkitEnterFullscreen) { v.webkitEnterFullscreen(); return; } }
+// Stubs compatibilité pages existantes
+function playerTogglePlay()  { if (_player) _player.paused ? _player.play() : _player.pause(); }
+function playerSkip(s)       { if (_player) _player.currentTime = Math.max(0, _player.currentTime + s); }
+function playerSetVol(v)     { if (_player) { _player.volume = parseFloat(v); _player.muted = (v == 0); } }
+function playerToggleMute()  { if (_player) _player.muted = !_player.muted; }
+function playerToggleFS() {
   var el = document.getElementById('player-wrap');
   if (!el) return;
-  if (document.fullscreenElement) document.exitFullscreen && document.exitFullscreen();
-  else el.requestFullscreen && el.requestFullscreen();
+  if (IS_IOS) { var v = el.querySelector('video'); if (v && v.webkitEnterFullscreen) { v.webkitEnterFullscreen(); return; } }
+  document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen();
 }
-function playerKeydown(e) {
-  var tag = document.activeElement ? document.activeElement.tagName : '';
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-  // Vidstack gère nativement espace, flèches, etc. — on laisse passer
-}
-
-// Alias pour compatibilité
+function playerKeydown(e) {}
 function updateProg()    {}
 function togglePlay()    { playerTogglePlay(); }
 function skip(s)         { playerSkip(s); }
