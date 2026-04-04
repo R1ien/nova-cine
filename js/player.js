@@ -538,14 +538,24 @@ function _onFsChange() {
   if (_isFs) {
     pw.classList.add('nc-fs');
     _fsBarVisible = false;
-    _fsShowBar(); /* Montrer au départ */
-    /* Vérifier toutes les 500ms si la barre doit se cacher */
+    _fsShowBar();
     clearInterval(_fsInterval);
     _fsInterval = setInterval(function() {
       if (!_isFs) { clearInterval(_fsInterval); return; }
       var idle = Date.now() - _fsLastMove;
       if (idle > 3000) _fsHideBar();
     }, 500);
+
+    /* Simuler double appui espace pour initialiser nc-playing correctement */
+    setTimeout(function() {
+      var e1 = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true });
+      document.dispatchEvent(e1);
+      setTimeout(function() {
+        var e2 = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true });
+        document.dispatchEvent(e2);
+      }, 80);
+    }, 150);
+
   } else {
     clearInterval(_fsInterval);
     pw.classList.remove('nc-fs');
@@ -686,20 +696,6 @@ async function buildVjs(wrap,url,resumeAt,showIosHint) {
     _vjsPlayer.on('pause', function(){ setPlaying(false); });
     _vjsPlayer.on('ended', function(){ setPlaying(false); });
 
-    /* Simuler pause + reprise au premier chargement pour initialiser
-       correctement les classes nc-playing et _fsLastMove */
-    _vjsPlayer.one('canplay', function() {
-      setTimeout(function() {
-        if (!_vjsPlayer) return;
-        _vjsPlayer.pause();
-        setTimeout(function() {
-          if (!_vjsPlayer) return;
-          _vjsPlayer.play().catch(function(){});
-          /* Forcer _fsShowBar au cas où on est déjà en fullscreen */
-          _fsShowBar();
-        }, 80);
-      }, 120);
-    });
   });
 
   _vidElProxy={
