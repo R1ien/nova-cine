@@ -227,12 +227,16 @@ nav {
 }
 .player-overlay.open{display:flex;}
 .player-modal{
-  background:var(--surface);
+  background:#000;
   width:100%;max-width:960px;
   border-radius:0;
   overflow:hidden;position:relative;
   max-height:100vh;overflow-y:auto;
 }
+/* Fond noir en fullscreen partout */
+.video-js.vjs-fullscreen { background:#000 !important; }
+:-webkit-full-screen { background:#000 !important; }
+:fullscreen { background:#000 !important; }
 .modal-close{
   position:absolute;top:.6rem;right:.6rem;z-index:10;
   background:rgba(0,0,0,.7);border:none;color:var(--text);cursor:pointer;

@@ -11,6 +11,7 @@ var _vjsPlayer  = null;
 var _hideTimer  = null;
 var _mo         = null;   // MutationObserver anti-vjs-user-inactive
 var _ctrlEl     = null;   // .vjs-control-bar
+var _actTargets = [];     // éléments sur lesquels on écoute mousemove
 
 var IS_IOS    = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 var IS_MOBILE = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -441,14 +442,41 @@ function scheduleHide() {
 function onActivity() { showCtrl(); scheduleHide(); }
 
 function attachActivity() {
-  document.addEventListener('mousemove',  onActivity, { passive: true });
-  document.addEventListener('touchstart', onActivity, { passive: true });
-  document.addEventListener('keydown',    onActivity, { passive: true });
+  detachActivity();
+  _actTargets = [document];
+  /* En fullscreen, le navigateur route les events vers fullscreenElement,
+     pas vers document. On écoute donc sur les deux. */
+  var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+  if (fsEl && fsEl !== document) _actTargets.push(fsEl);
+
+  _actTargets.forEach(function(t) {
+    t.addEventListener('mousemove',  onActivity, { passive: true });
+    t.addEventListener('touchstart', onActivity, { passive: true });
+    t.addEventListener('keydown',    onActivity, { passive: true });
+  });
+
+  /* Re-attacher quand on entre/sort du fullscreen */
+  document.addEventListener('fullscreenchange',       _onFsChange);
+  document.addEventListener('webkitfullscreenchange', _onFsChange);
 }
+
+function _onFsChange() {
+  /* Ré-attacher les listeners sur le nouvel élément fullscreen */
+  attachActivity();
+  /* Toujours montrer la barre au changement d'état */
+  showCtrl();
+  scheduleHide();
+}
+
 function detachActivity() {
-  document.removeEventListener('mousemove',  onActivity);
-  document.removeEventListener('touchstart', onActivity);
-  document.removeEventListener('keydown',    onActivity);
+  _actTargets.forEach(function(t) {
+    t.removeEventListener('mousemove',  onActivity);
+    t.removeEventListener('touchstart', onActivity);
+    t.removeEventListener('keydown',    onActivity);
+  });
+  _actTargets = [];
+  document.removeEventListener('fullscreenchange',       _onFsChange);
+  document.removeEventListener('webkitfullscreenchange', _onFsChange);
   clearTimeout(_hideTimer);
   _hideTimer = null;
   if (_mo) { _mo.disconnect(); _mo = null; }
