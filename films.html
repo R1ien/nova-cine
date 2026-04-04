@@ -62,7 +62,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="js/app.js"></script><script src="js/player.js"></script><script src="js/nav.js"></script>
 <script>
-var currentUser=null,vidEl=null,currentPlayCtx=null,saveTimer=null,activeGenre='Tous';
+var currentUser=null,currentPlayCtx=null,saveTimer=null,activeGenre='Tous';
 (async function(){
   initSB();currentUser=getSession();initNav('films');
   if(currentUser)await loadUserProgress(currentUser.id);
@@ -99,12 +99,12 @@ function playFilm(id){
   currentPlayCtx={type:'film',id:id};buildPlayer(f.video_url,r);
   document.getElementById('player-info').innerHTML='<div class="modal-title">'+esc(f.title)+'</div><div class="modal-meta">'+esc(f.genre||'')+(f.year?' · '+f.year:'')+(r>2?' · <span style="color:var(--accent)">Reprise à '+fmt(r)+'</span>':'')+'</div>'+(f.description?'<div class="modal-desc">'+esc(f.description)+'</div>':'');
   document.getElementById('player-overlay').classList.add('open');
-  if(currentUser){if(saveTimer)clearInterval(saveTimer);saveTimer=setInterval(function(){if(vidEl&&!isNaN(vidEl.duration)&&vidEl.duration>0)saveProgress(currentUser.id,id,true,vidEl.currentTime,vidEl.duration);},5000);}
+  if(currentUser){if(saveTimer)clearInterval(saveTimer);saveTimer=setInterval(function(){if(_vstPlayer&&playerDuration()>0)saveProgress(currentUser.id,id,true,playerCurrentTime(),playerDuration());},5000);}
 }
 function closePlayer(){
   if(saveTimer){clearInterval(saveTimer);saveTimer=null;}
-  if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&vidEl.duration>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,vidEl.currentTime,vidEl.duration);
-  document.getElementById('player-overlay').classList.remove('open');document.getElementById('player-wrap').innerHTML='';vidEl=null;currentPlayCtx=null;
+  if(_vstPlayer&&currentPlayCtx&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());
+  document.getElementById('player-overlay').classList.remove('open');playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;
   renderFilms(activeGenre==='Tous'?films:films.filter(function(f){return f.genre===activeGenre;}));
 }
 function togglePlay(){playerTogglePlay();}
@@ -115,7 +115,7 @@ function toggleFS(){playerToggleFS();}
 // seekV → player.js
 document.getElementById('player-overlay').addEventListener('click',function(e){if(e.target===this)closePlayer();});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();playerKeydown(e);});
-window.addEventListener('beforeunload',function(){if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,vidEl.currentTime,vidEl.duration);});
+window.addEventListener('beforeunload',function(){if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());});
 </script>
 </body>
 </html>

@@ -205,7 +205,7 @@ function renderContinue() {
 // ── PLAY — delegates to player.js ──
 function openPlayer(url, r, html){buildPlayer(url,r);document.getElementById('player-info').innerHTML=html;document.getElementById('player-overlay').classList.add('open');}
 
-function closePlayer(){stopAutoSave();document.getElementById('player-overlay').classList.remove('open');document.getElementById('player-wrap').innerHTML='';vidEl=null;currentPlayCtx=null;renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
+function closePlayer(){stopAutoSave();document.getElementById('player-overlay').classList.remove('open');playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
 function updateProg(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);}
 function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
 function skip(s){if(vidEl)vidEl.currentTime+=s;}
@@ -266,8 +266,8 @@ function switchEp(epId){
   if(s)document.getElementById('player-info').innerHTML=buildSeriesInfo(s,eps,epId);
 }
 
-function startAutoSave(id,isFilm){stopAutoSave();saveTimer=setInterval(function(){if(vidEl&&!isNaN(vidEl.duration)&&vidEl.duration>0&&currentUser)saveProgress(currentUser.id,id,isFilm,vidEl.currentTime,vidEl.duration);},5000);}
-function stopAutoSave(){if(saveTimer){clearInterval(saveTimer);saveTimer=null;}if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&vidEl.duration>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,currentPlayCtx.type==='film',vidEl.currentTime,vidEl.duration);}
+function startAutoSave(id,isFilm){stopAutoSave();saveTimer=setInterval(function(){if(_vstPlayer&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,id,isFilm,playerCurrentTime(),playerDuration());},5000);}
+function stopAutoSave(){if(saveTimer){clearInterval(saveTimer);saveTimer=null;}if(_vstPlayer&&currentPlayCtx&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,currentPlayCtx.type==='film',playerCurrentTime(),playerDuration());}
 
 // Gate
 var gbuf='',GLEN=4;

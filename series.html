@@ -62,7 +62,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="js/app.js"></script><script src="js/player.js"></script><script src="js/nav.js"></script>
 <script>
-var currentUser=null,vidEl=null,currentPlayCtx=null,saveTimer=null,activeGenre='Tous';
+var currentUser=null,currentPlayCtx=null,saveTimer=null,activeGenre='Tous';
 (async function(){
   initSB();currentUser=getSession();initNav('series');
   if(currentUser)await loadUserProgress(currentUser.id);
@@ -93,7 +93,7 @@ function makeCard(s){
 function videoType(u){var e=u.split('.').pop().split('?')[0].toLowerCase();return({mp4:'video/mp4',mkv:'video/x-matroska',mov:'video/quicktime',avi:'video/x-msvideo',webm:'video/webm',ogv:'video/ogg',m4v:'video/mp4',flv:'video/x-flv'})[e]||'video/mp4';}
 // buildPlayer → player.js
 
-function startSave(id){if(saveTimer)clearInterval(saveTimer);if(!currentUser)return;saveTimer=setInterval(function(){if(vidEl&&!isNaN(vidEl.duration)&&vidEl.duration>0)saveProgress(currentUser.id,id,false,vidEl.currentTime,vidEl.duration);},5000);}
+function startSave(id){if(saveTimer)clearInterval(saveTimer);if(!currentUser)return;saveTimer=setInterval(function(){if(_vstPlayer&&playerDuration()>0)saveProgress(currentUser.id,id,false,vidEl.currentTime,vidEl.duration);},5000);}
 function stopSave(id){if(saveTimer){clearInterval(saveTimer);saveTimer=null;}if(id&&vidEl&&!isNaN(vidEl.duration)&&vidEl.duration>0&&currentUser)saveProgress(currentUser.id,id,false,vidEl.currentTime,vidEl.duration);}
 function buildInfo(s,eps,activeId){
   var epHtml=eps.map(function(ep){var p=getProgress(ep.id);var pct=p?Math.min(100,p.percent):0;var extra=p&&p.percent>2?(p.completed?' <span style="color:var(--green);font-size:.68rem">✓</span>':' <span style="color:var(--accent);font-size:.68rem">'+fmt(p.position)+'</span>'):'';return '<div class="ep-row'+(ep.id===activeId?' playing':'')+'" onclick="switchEp(\''+ep.id+'\')">'+'<div class="ep-n">S'+(ep.season_number||1)+'E'+(ep.episode_number||1)+'</div>'+'<div class="ep-t">'+esc(ep.title)+extra+'</div>'+(pct>2?'<div class="ep-bar"><div class="ep-bar-fill" style="width:'+pct+'%"></div></div>':'')+'</div>';}).join('');
@@ -120,7 +120,7 @@ function switchEp(epId){
   currentPlayCtx={type:'episode',id:epId};buildPlayer(ep.video_url,r);
   if(s)document.getElementById('player-info').innerHTML=buildInfo(s,eps,epId);startSave(epId);
 }
-function closePlayer(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);document.getElementById('player-overlay').classList.remove('open');document.getElementById('player-wrap').innerHTML='';vidEl=null;currentPlayCtx=null;renderList(activeGenre==='Tous'?series:series.filter(function(s){return s.genre===activeGenre;}));}
+function closePlayer(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);document.getElementById('player-overlay').classList.remove('open');playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;renderList(activeGenre==='Tous'?series:series.filter(function(s){return s.genre===activeGenre;}));}
 function togglePlay(){playerTogglePlay();}
 function skip(s){playerSkip(s);}
 function setVol(v){playerSetVol(v);}
