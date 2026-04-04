@@ -158,68 +158,70 @@ function injectTheme() {
       pointer-events: none;
     }
 
-    /* ── AUTO-HIDE — hors fullscreen ──
-       nc-playing : barre se cache après 2s, réapparaît au hover
-    ── */
-    #player-wrap.nc-playing:not(:-webkit-full-screen):not(:fullscreen) .vjs-control-bar {
+    /* ══════════════════════════════════════════
+       AUTO-HIDE — 100% piloté par classes JS
+       Aucun sélecteur :fullscreen/:hover — trop peu fiables
+       
+       nc-playing  = lecture en cours
+       nc-fs       = fullscreen actif  
+       nc-fs-active = souris bougée en fullscreen (barre visible)
+    ══════════════════════════════════════════ */
+
+    /* Hors fullscreen, en lecture : barre cachée, réapparaît au hover */
+    #player-wrap.nc-playing:not(.nc-fs) .vjs-control-bar {
       opacity: 0 !important;
       pointer-events: none !important;
-      transition: opacity .35s ease 2s !important;
+      transition: opacity .3s ease 2s !important;
     }
-    #player-wrap.nc-playing:not(:-webkit-full-screen):not(:fullscreen):hover .vjs-control-bar {
+    #player-wrap.nc-playing:not(.nc-fs):hover .vjs-control-bar {
       opacity: 1 !important;
       pointer-events: auto !important;
       transition: opacity .1s ease !important;
     }
 
-    /* Toujours visible en pause */
-    #player-wrap:not(.nc-playing) .vjs-control-bar {
+    /* Hors fullscreen, en lecture : curseur caché */
+    #player-wrap.nc-playing:not(.nc-fs) { cursor: none; }
+    #player-wrap.nc-playing:not(.nc-fs):hover { cursor: default; }
+
+    /* En pause (hors fs) : toujours visible */
+    #player-wrap:not(.nc-playing):not(.nc-fs) .vjs-control-bar {
       opacity: 1 !important;
       pointer-events: auto !important;
       transition: none !important;
     }
 
-    /* Curseur caché en lecture hors fullscreen */
-    #player-wrap.nc-playing:not(:-webkit-full-screen):not(:fullscreen) { cursor: none; }
-    #player-wrap.nc-playing:not(:-webkit-full-screen):not(:fullscreen):hover { cursor: default; }
-
-    /* ── AUTO-HIDE — fullscreen ──
-       Le JS ajoute/retire nc-fs-active pour montrer la barre.
-       nc-fs-active bat nc-playing car il est plus spécifique.
-    ── */
-    #player-wrap:-webkit-full-screen .vjs-control-bar,
-    #player-wrap:fullscreen           .vjs-control-bar {
+    /* Fullscreen en lecture : barre cachée par défaut */
+    #player-wrap.nc-fs.nc-playing .vjs-control-bar {
       opacity: 0 !important;
       pointer-events: none !important;
       transition: opacity .25s ease !important;
-      cursor: none !important;
     }
-    #player-wrap:-webkit-full-screen.nc-fs-active .vjs-control-bar,
-    #player-wrap:fullscreen.nc-fs-active           .vjs-control-bar {
+    /* Fullscreen en lecture, souris active : barre visible */
+    #player-wrap.nc-fs.nc-playing.nc-fs-active .vjs-control-bar {
       opacity: 1 !important;
       pointer-events: auto !important;
       transition: opacity .12s ease !important;
     }
-    /* Curseur en fullscreen */
-    #player-wrap:-webkit-full-screen           { cursor: none !important; }
-    #player-wrap:fullscreen                   { cursor: none !important; }
-    #player-wrap:-webkit-full-screen.nc-fs-active { cursor: default !important; }
-    #player-wrap:fullscreen.nc-fs-active           { cursor: default !important; }
-    /* En pause, toujours visible */
-    #player-wrap:-webkit-full-screen:not(.nc-playing) .vjs-control-bar,
-    #player-wrap:fullscreen:not(.nc-playing)           .vjs-control-bar {
+    /* Fullscreen en pause : toujours visible */
+    #player-wrap.nc-fs:not(.nc-playing) .vjs-control-bar {
       opacity: 1 !important;
       pointer-events: auto !important;
+      transition: opacity .12s ease !important;
     }
+
+    /* Curseur fullscreen */
+    #player-wrap.nc-fs.nc-playing { cursor: none; }
+    #player-wrap.nc-fs.nc-playing.nc-fs-active { cursor: default; }
+    #player-wrap.nc-fs:not(.nc-playing) { cursor: default; }
 
     /* Mobile : barre toujours visible */
     @media (max-width: 640px) {
-      #player-wrap.nc-playing .vjs-control-bar {
+      #player-wrap .vjs-control-bar {
         opacity: 1 !important;
         pointer-events: auto !important;
         transition: none !important;
       }
-      #player-wrap.nc-playing { cursor: default !important; }
+      #player-wrap { cursor: default !important; }
     }
 
     /* ── Boutons VJS ── */
@@ -373,43 +375,40 @@ function injectTheme() {
     #player-wrap .vjs-loading-spinner { border-color: rgba(232,160,32,.2) !important; }
     #player-wrap .vjs-loading-spinner::before, #player-wrap .vjs-loading-spinner::after { border-top-color: #e8a020 !important; }
 
-    /* ── Fullscreen natif sur player-wrap ── */
-    #player-wrap:-webkit-full-screen {
-      background: #000 !important;
-      width: 100vw !important; height: 100vh !important;
-      max-width: none !important; aspect-ratio: unset !important;
-      position: fixed !important; inset: 0 !important;
-    }
+    /* ── Fullscreen — class .nc-fs + sélecteurs natifs (double sécurité) ── */
+    #player-wrap.nc-fs,
+    #player-wrap:-webkit-full-screen,
     #player-wrap:fullscreen {
       background: #000 !important;
       width: 100vw !important; height: 100vh !important;
       max-width: none !important; aspect-ratio: unset !important;
       position: fixed !important; inset: 0 !important;
     }
-    /* nc-wrap prend tout l'espace dispo en fullscreen */
+    #player-wrap.nc-fs #nc-wrap,
     #player-wrap:-webkit-full-screen #nc-wrap,
-    #player-wrap:fullscreen           #nc-wrap {
+    #player-wrap:fullscreen #nc-wrap {
       width: 100% !important; height: 100% !important;
       aspect-ratio: unset !important;
       position: absolute !important; inset: 0 !important;
     }
-    /* video-js aussi */
+    #player-wrap.nc-fs .video-js,
     #player-wrap:-webkit-full-screen .video-js,
-    #player-wrap:fullscreen           .video-js {
+    #player-wrap:fullscreen .video-js {
       width: 100% !important; height: 100% !important;
       aspect-ratio: unset !important;
       position: absolute !important; inset: 0 !important;
     }
-    /* La control-bar reste collée au bas de player-wrap (100vh) */
+    #player-wrap.nc-fs .vjs-control-bar,
     #player-wrap:-webkit-full-screen .vjs-control-bar,
-    #player-wrap:fullscreen           .vjs-control-bar {
+    #player-wrap:fullscreen .vjs-control-bar {
       position: fixed !important;
       bottom: 0 !important; left: 0 !important; right: 0 !important;
       z-index: 2147483647 !important;
     }
-    /* Pas d'animation de bulles qui glitchent en fullscreen */
+    /* Bulles cachées en fullscreen */
+    #player-wrap.nc-fs .nc-bbl,
     #player-wrap:-webkit-full-screen .nc-bbl,
-    #player-wrap:fullscreen           .nc-bbl {
+    #player-wrap:fullscreen .nc-bbl {
       display: none !important;
     }
 
@@ -497,19 +496,19 @@ function setupFsListener() {
     if (!pw) return;
 
     if (_isFs) {
-      /* Écouter sur document — plus fiable que player-wrap en fullscreen */
+      pw.classList.add('nc-fs');           /* CSS sait qu'on est en FS */
+      pw.classList.add('nc-fs-active');    /* Barre visible au départ */
       document.addEventListener('mousemove',  _onFsMove);
       document.addEventListener('touchstart', _onFsMove, { passive: true });
       document.addEventListener('keydown',    _onFsMove);
-      /* Montrer immédiatement */
-      pw.classList.add('nc-fs-active');
       _schedFsHide(pw);
     } else {
+      pw.classList.remove('nc-fs');
+      pw.classList.remove('nc-fs-active');
       document.removeEventListener('mousemove',  _onFsMove);
       document.removeEventListener('touchstart', _onFsMove);
       document.removeEventListener('keydown',    _onFsMove);
       clearTimeout(_fsHideTimer);
-      pw.classList.remove('nc-fs-active');
     }
   };
   document.addEventListener('fullscreenchange',       handler);
