@@ -213,9 +213,9 @@ function renderContinue() {
 }
 
 // ── PLAY — delegates to player.js ──
-function openPlayer(url, r, html){buildPlayer(url,r);document.getElementById('player-info').innerHTML=html;document.getElementById('player-overlay').classList.add('open');var b=document.getElementById('nc-close-btn');if(b)b.style.display='flex';}
+function openPlayer(url, r, html, hashSlug){buildPlayer(url,r);document.getElementById('player-info').innerHTML=html;document.getElementById('player-overlay').classList.add('open');var b=document.getElementById('nc-close-btn');if(b)b.style.display='flex';history.pushState(null,'',window.location.pathname+(hashSlug?'#lecteur-'+hashSlug:'#lecteur'));}
 
-function closePlayer(){stopAutoSave();document.getElementById('player-overlay').classList.remove('open');var b=document.getElementById('nc-close-btn');if(b)b.style.display='none';playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
+function closePlayer(){if(!document.getElementById('player-overlay').classList.contains('open'))return;stopAutoSave();document.getElementById('player-overlay').classList.remove('open');var b=document.getElementById('nc-close-btn');if(b)b.style.display='none';playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;if(window.location.hash)history.pushState(null,'',window.location.pathname);renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
 function updateProg(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);}
 function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
 function skip(s){if(vidEl)vidEl.currentTime+=s;}
@@ -231,7 +231,8 @@ function playFilm(id){
   openPlayer(f.video_url,r,
     '<div class="modal-title">'+esc(f.title)+'</div>'
     +'<div class="modal-meta">'+esc(f.genre||'')+(f.year?' · '+f.year:'')+(r>2?' · <span style="color:var(--accent)">Reprise à '+fmt(r)+'</span>':'')+'</div>'
-    +(f.description?'<div class="modal-desc">'+esc(f.description)+'</div>':''));
+    +(f.description?'<div class="modal-desc">'+esc(f.description)+'</div>':''),
+    encodeURIComponent(f.title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')));
   if(currentUser)startAutoSave(id,true);
 }
 async function playSeriesModal(id){
@@ -288,11 +289,12 @@ function gdel(){gbuf=gbuf.slice(0,-1);refreshDots();}
 function refreshDots(s){for(var i=0;i<GLEN;i++){var el=document.getElementById('d'+i);el.className='dot';if(s==='err')el.classList.add('err');else if(i<gbuf.length)el.classList.add('on');}}
 async function checkAdminCode(){var h=await sha256(gbuf);if(h===CORRECT_HASH){closeGate();window.location.href='admin.html';}else{refreshDots('err');setTimeout(function(){gbuf='';refreshDots();},700);}}
 
-/* Bouton fermer — totalement indépendant de Plyr */
+/* Fermer via popstate — fonctionne avec le bouton retour et le hash */
+window.addEventListener('popstate', function() {
+  if (!window.location.hash) closePlayer();
+});
 var _ncCloseBtn = document.getElementById('nc-close-btn');
-if (_ncCloseBtn) {
-  _ncCloseBtn.onclick = function() { closePlayer(); };
-}
+if (_ncCloseBtn) _ncCloseBtn.onclick = function() { history.back(); };
 document.getElementById('gate-overlay').addEventListener('click',function(e){if(e.target===this)closeGate();});
 document.addEventListener('keydown',function(e){
   if(document.getElementById('gate-overlay').classList.contains('open')){if(e.key>='0'&&e.key<='9')gp(e.key);if(e.key==='Backspace'){e.preventDefault();gdel();}if(e.key==='Escape')closeGate();return;}

@@ -123,11 +123,12 @@ function setVol(v){playerSetVol(v);}
 function toggleMute(){playerToggleMute();}
 function toggleFS(){playerToggleFS();}
 // seekV → player.js
-/* Bouton fermer — totalement indépendant de Plyr */
+/* Fermer via popstate — fonctionne avec le bouton retour et le hash */
+window.addEventListener('popstate', function() {
+  if (!window.location.hash) closePlayer();
+});
 var _ncCloseBtn = document.getElementById('nc-close-btn');
-if (_ncCloseBtn) {
-  _ncCloseBtn.onclick = function() { closePlayer(); };
-}
+if (_ncCloseBtn) _ncCloseBtn.onclick = function() { history.back(); };
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();playerKeydown(e);});
 window.addEventListener('beforeunload',function(){if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());});
 </script>
