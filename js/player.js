@@ -107,63 +107,7 @@ async function buildPlayer(url, resumeAt) {
   var check = await checkVideoUrl(url);
   if (check.ok === false) { showFallback(wrap, url, check.reason); return; }
 
-  /* ── iOS : lecteur natif avec webkitEnterFullscreen ── */
-  if (IS_IOS) {
-    wrap.innerHTML = '';
-    var vid = document.createElement('video');
-    vid.setAttribute('playsinline', '');
-    vid.setAttribute('preload', 'none');
-    vid.setAttribute('autoplay', '');
-    vid.style.cssText = 'width:100%;height:100%;background:#000;display:block;';
-    var src = document.createElement('source');
-    src.src  = url;
-    src.type = videoMime(url);
-    vid.appendChild(src);
-
-    // Conteneur avec bouton plein écran natif iOS
-    var iosCont = document.createElement('div');
-    iosCont.style.cssText = 'position:relative;aspect-ratio:16/9;background:#000;';
-    iosCont.appendChild(vid);
-
-    // Bouton plein écran superposé
-    var fsBtn = document.createElement('button');
-    fsBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" style="width:22px;height:22px"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
-    fsBtn.title = 'Plein écran';
-    fsBtn.style.cssText = 'position:absolute;bottom:8px;right:8px;z-index:10;' +
-      'background:rgba(0,0,0,.6);border:none;border-radius:6px;cursor:pointer;' +
-      'color:#fff;padding:6px;display:flex;align-items:center;justify-content:center;' +
-      'touch-action:manipulation;';
-    fsBtn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      if (vid.webkitEnterFullscreen) vid.webkitEnterFullscreen();
-    });
-    iosCont.appendChild(fsBtn);
-    wrap.appendChild(iosCont);
-
-    // Reprendre à la position sauvegardée
-    if (resumeAt > 0) {
-      vid.addEventListener('loadedmetadata', function() {
-        vid.currentTime = resumeAt;
-      }, { once: true });
-    }
-
-    // Proxy pour autosave
-    _plyr = {
-      currentTime: 0,
-      duration:    0,
-      _vid: vid,
-      destroy: function() {},
-    };
-    vid.addEventListener('timeupdate', function() {
-      _plyr.currentTime = vid.currentTime;
-      _plyr.duration    = vid.duration || 0;
-    });
-
-    vid.play().catch(function() {});
-    return;
-  }
-
-  /* ── PLYR (non-iOS) ── */
+  /* ── PLYR ── */
   wrap.innerHTML = '';
 
   var video = document.createElement('video');
@@ -227,32 +171,41 @@ async function buildPlayer(url, resumeAt) {
   _plyr.once('error', function() {
     showFallback(wrap, url, 'error');
   });
+
+  /* Sur iOS : intercepter le bouton fullscreen de Plyr
+     pour utiliser le lecteur natif iOS à la place */
+  if (IS_IOS) {
+    _plyr.on('ready', function() {
+      var fsBtn = wrap.querySelector('.plyr__control[data-plyr="fullscreen"]');
+      if (fsBtn) {
+        /* Remplacer le listener Plyr par notre appel webkit */
+        fsBtn.addEventListener('click', function(e) {
+          e.stopImmediatePropagation();
+          var vid = wrap.querySelector('video');
+          if (vid && vid.webkitEnterFullscreen) vid.webkitEnterFullscreen();
+        }, true); /* capture: true → s'exécute avant le listener Plyr */
+      }
+    });
+  }
 }
 
 /* ── API PUBLIQUE ── */
-function playerCurrentTime() { if (!_plyr) return 0; return IS_IOS ? (_plyr.currentTime || 0) : _plyr.currentTime; }
-function playerDuration()    { if (!_plyr) return 0; return IS_IOS ? (_plyr.duration || 0)    : _plyr.duration; }
+function playerCurrentTime() { return _plyr ? _plyr.currentTime : 0; }
+function playerDuration()    { return _plyr ? _plyr.duration    : 0; }
 function playerDispose()     { if (_plyr) { try { _plyr.destroy(); } catch(e) {} _plyr = null; } }
 
-function playerTogglePlay() {
-  if (!_plyr) return;
-  if (IS_IOS && _plyr._vid) {
-    var vid = _plyr._vid;
-    vid.paused ? vid.play().catch(function(){}) : vid.pause();
-    return;
-  }
-  _plyr.togglePlay();
-}
+function playerTogglePlay()  { if (_plyr) _plyr.togglePlay(); }
 function playerSkip(s)       { if (_plyr) _plyr.currentTime = Math.max(0, _plyr.currentTime + s); }
 function playerSetVol(v)     { if (_plyr) { _plyr.volume = parseFloat(v); _plyr.muted = (v == 0); } }
 function playerToggleMute()  { if (_plyr) _plyr.toggleControls(); }
 function playerToggleFS() {
   if (!_plyr) return;
   if (IS_IOS) {
-    var vid = _plyr._vid || document.querySelector('#player-wrap video');
+    /* Sur iOS : plein écran natif Apple via webkitEnterFullscreen sur la <video> de Plyr */
+    var vid = document.querySelector('#player-wrap video');
     if (vid && vid.webkitEnterFullscreen) { vid.webkitEnterFullscreen(); return; }
   }
-  if (_plyr.fullscreen) _plyr.fullscreen.toggle();
+  _plyr.fullscreen.toggle();
 }
 function playerKeydown(e)    {}
 
