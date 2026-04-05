@@ -15,9 +15,6 @@
 @media(min-width:900px){.page-wrap{padding:calc(var(--nav-h) + 2.5rem) 3.5rem 3rem;}.page-wrap h1{font-size:2.5rem;}}
 @media(min-width:1200px){.page-wrap{padding:calc(var(--nav-h) + 2.5rem) 4rem 3rem;}}
 </style>
-  <!-- Plyr -->
-  
-  
 </head>
 <body>
 <nav>
@@ -34,9 +31,6 @@
       <span class="user-name" id="user-name-display"></span>
       <button class="logout-btn" onclick="doLogout()">✕</button>
     </div>
-    <button class="wrench-btn" onclick="window.location.href='admin.html'" title="Administration">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-    </button>
     <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
   </div>
 </nav>
@@ -52,55 +46,54 @@
   <div class="filter-bar" id="filter-bar"></div>
   <div class="cards-row" id="row-films"></div>
 </div>
+<div class="notif" id="notif"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script><script src="js/app.js"></script><script src="js/nav.js"></script>
+<script src="config.js"></script>
+<script src="js/app.js"></script>
+<script src="js/nav.js"></script>
 <script>
-var currentUser=null,currentPlayCtx=null,saveTimer=null,activeGenre='Tous';
+var currentUser = null, activeGenre = 'Tous';
 (async function(){
-  initSB();currentUser=getSession();initNav('films');
-  if(currentUser)await loadUserProgress(currentUser.id);
-  await loadFilms();renderFilters();renderFilms(films);initLazyImages();
+  initSB();
+  currentUser = getSession();
+  initNav('films');
+  if (currentUser) await loadUserProgress(currentUser.id);
+  await loadFilms();
+  renderFilters();
+  renderFilms(films);
+  initLazyImages();
 })();
-function renderFilters(){
-  var genres=['Tous'];
-  films.forEach(function(f){if(f.genre&&genres.indexOf(f.genre)===-1)genres.push(f.genre);});
-  document.getElementById('filter-bar').innerHTML=genres.map(function(g){
+
+function renderFilters() {
+  var genres = ['Tous'];
+  films.forEach(function(f){ if (f.genre && genres.indexOf(f.genre) === -1) genres.push(f.genre); });
+  document.getElementById('filter-bar').innerHTML = genres.map(function(g){
     return '<button class="filter-btn'+(g===activeGenre?' active':'')+'" onclick="filterBy(\''+esc(g)+'\')">'+esc(g)+'</button>';
   }).join('');
 }
-function filterBy(g){activeGenre=g;renderFilters();renderFilms(g==='Tous'?films:films.filter(function(f){return f.genre===g;}));}
-function renderFilms(list){
-  document.getElementById('row-films').innerHTML=list.length
-    ?list.map(makeCard).join('')
-    :'<p style="color:var(--muted);padding:1rem;font-size:.85rem;">Aucun film.</p>';
+function filterBy(g) {
+  activeGenre = g;
+  renderFilters();
+  renderFilms(g === 'Tous' ? films : films.filter(function(f){ return f.genre === g; }));
+}
+function renderFilms(list) {
+  document.getElementById('row-films').innerHTML = list.length
+    ? list.map(function(f){
+        var p = getProgress(f.id);
+        var bar = '', badge = '';
+        if (p && p.percent > 2 && !p.completed) {
+          bar = '<div class="card-progress"><div class="card-progress-fill" style="width:'+Math.min(100,p.percent)+'%"></div></div>';
+          badge = '<div class="card-resume">REPRENDRE</div>';
+        }
+        return '<div class="card" onclick="window.location.href=\'watch.html?id='+f.id+'&type=film\'">'
+          +(f.image_url?'<img data-src="'+esc(f.image_url)+'" alt="'+esc(f.title)+'" loading="lazy" decoding="async">':'<div class="card-no-img">'+svgFilm()+'</div>')
+          +badge+'<div class="card-overlay"><div class="card-name">'+esc(f.title)+'</div><div class="card-meta">'+esc(f.genre||'')+' '+(f.year||'')+'</div></div>'
+          +'<button class="card-play">▶</button>'+bar+'</div>';
+      }).join('')
+    : '<p style="color:var(--muted);padding:1rem;font-size:.85rem;">Aucun film.</p>';
   initLazyImages();
 }
-function makeCard(f){
-  var p=getProgress(f.id);var bar='',badge='';
-  if(p&&p.percent>2&&!p.completed){bar='<div class="card-progress"><div class="card-progress-fill" style="width:'+Math.min(100,p.percent)+'%"></div></div>';badge='<div class="card-resume">REPRENDRE</div>';}
-  return '<div class="card" onclick="window.location.href='watch.html?id='+f.id+'&type=film'">'
-    +(f.image_url?'<img data-src="'+esc(f.image_url)+'" alt="'+esc(f.title)+'" loading="lazy" decoding="async">':'<div class="card-no-img">'+svgFilm()+'</div>')
-    +badge+'<div class="card-overlay"><div class="card-name">'+esc(f.title)+'</div><div class="card-meta">'+esc(f.genre||'')+' '+(f.year||'')+'</div></div>'
-    +'<button class="card-play">▶</button>'+bar+'</div>';
-}
-function videoType(u){var e=u.split('.').pop().split('?')[0].toLowerCase();return({mp4:'video/mp4',mkv:'video/x-matroska',mov:'video/quicktime',avi:'video/x-msvideo',webm:'video/webm',ogv:'video/ogg',m4v:'video/mp4',flv:'video/x-flv'})[e]||'video/mp4';}
-// buildPlayer → player.js
-
-
-
-function togglePlay(){playerTogglePlay();}
-function skip(s){playerSkip(s);}
-function setVol(v){playerSetVol(v);}
-function toggleMute(){playerToggleMute();}
-function toggleFS(){playerToggleFS();}
-// seekV → player.js
-/* Fermer via popstate — fonctionne avec le bouton retour et le hash */
-
-
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();playerKeydown(e);});
-window.addEventListener('beforeunload',function(){if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());});
 </script>
-<!-- Bouton fermer HORS du DOM Plyr -->
 </body>
 </html>

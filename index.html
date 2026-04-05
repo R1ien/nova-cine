@@ -198,19 +198,8 @@ function renderContinue() {
   initLazyImages();
 }
 
-// ── PLAY — delegates to player.js ──
 
-function updateProg(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);}
-function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
-function skip(s){if(vidEl)vidEl.currentTime+=s;}
-function setVol(v){if(vidEl){vidEl.volume=parseFloat(v);vidEl.muted=v==0;}}
-function toggleMute(){if(vidEl){vidEl.muted=!vidEl.muted;var sl=document.getElementById('vslider');if(sl)sl.value=vidEl.muted?0:vidEl.volume;}}
-function toggleFS(){var w=document.getElementById('player-wrap');if(!document.fullscreenElement){if(w.requestFullscreen)w.requestFullscreen();}else{if(document.exitFullscreen)document.exitFullscreen();}}
-function seekV(e){var b=document.getElementById('pbar');if(!vidEl||!b)return;var r=b.getBoundingClientRect();vidEl.currentTime=((e.clientX-r.left)/r.width)*vidEl.duration;}
 
-);
-window.addEventListener('beforeunload',function(){stopAutoSave();});
 </script>
-<!-- Bouton fermer HORS du DOM Plyr -->
 </body>
 </html>
