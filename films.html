@@ -102,11 +102,11 @@ function playFilm(id){
   currentPlayCtx={type:'film',id:id};buildPlayer(f.video_url,r);
   document.getElementById('player-info').innerHTML='<div class="modal-title">'+esc(f.title)+'</div><div class="modal-meta">'+esc(f.genre||'')+(f.year?' · '+f.year:'')+(r>2?' · <span style="color:var(--accent)">Reprise à '+fmt(r)+'</span>':'')+'</div>'+(f.description?'<div class="modal-desc">'+esc(f.description)+'</div>':'');
   document.getElementById('player-overlay').classList.add('open');
-  if(currentUser){if(saveTimer)clearInterval(saveTimer);saveTimer=setInterval(function(){if(_vstPlayer&&playerDuration()>0)saveProgress(currentUser.id,id,true,playerCurrentTime(),playerDuration());},5000);}
+  if(currentUser){if(saveTimer)clearInterval(saveTimer);saveTimer=setInterval(function(){if(_plyr&&playerDuration()>0)saveProgress(currentUser.id,id,true,playerCurrentTime(),playerDuration());},5000);}
 }
 function closePlayer(){
   if(saveTimer){clearInterval(saveTimer);saveTimer=null;}
-  if(_vstPlayer&&currentPlayCtx&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());
+  if(_plyr&&currentPlayCtx&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());
   document.getElementById('player-overlay').classList.remove('open');playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;
   renderFilms(activeGenre==='Tous'?films:films.filter(function(f){return f.genre===activeGenre;}));
 }

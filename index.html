@@ -206,6 +206,11 @@ function renderContinue() {
 }
 
 // ── PLAY — delegates to player.js ──
+function openPlayer(url, r, html) {
+  buildPlayer(url, r);
+  document.getElementById('player-info').innerHTML = html || '';
+  document.getElementById('player-overlay').classList.add('open');
+}
 
 function updateProg(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);}
 function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
