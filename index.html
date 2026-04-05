@@ -148,6 +148,18 @@
 <script src="js/player.js"></script>
 <script src="js/nav.js"></script>
 <script>
+/* Restaurer le scroll après fermeture du lecteur */
+(function() {
+  if (!window.location.hash) {
+    var saved = sessionStorage.getItem('nc_scroll_' + window.location.pathname);
+    if (saved) {
+      sessionStorage.removeItem('nc_scroll_' + window.location.pathname);
+      window.addEventListener('load', function() {
+        setTimeout(function() { window.scrollTo(0, parseInt(saved)); }, 50);
+      });
+    }
+  }
+})();
 var CORRECT_HASH='', heroFilm=null, vidEl=null, currentPlayCtx=null, saveTimer=null, currentUser=null;
 sha256('1390').then(function(h){ CORRECT_HASH=h; });
 
@@ -291,11 +303,21 @@ async function checkAdminCode(){var h=await sha256(gbuf);if(h===CORRECT_HASH){cl
 
 /* Fermer via popstate — fonctionne avec le bouton retour et le hash */
 window.addEventListener('hashchange', function() {
-  if (!window.location.hash) { window.location.href = window.location.pathname; }
+  if (!window.location.hash) {
+    sessionStorage.setItem('nc_scroll_' + window.location.pathname, window.scrollY);
+    window.location.href = window.location.pathname;
+  }
 });
 var _ncCloseBtn = document.getElementById('nc-close-btn');
-if (_ncCloseBtn) _ncCloseBtn.onclick = function() { window.location.hash = ''; };
+if (_ncCloseBtn) _ncCloseBtn.onclick = function() {
+  sessionStorage.setItem('nc_scroll_' + window.location.pathname, window.scrollY);
+  window.location.hash = '';
+};
 document.getElementById('gate-overlay').addEventListener('click',function(e){if(e.target===this)closeGate();});
+/* Fond sombre cliquable */
+document.getElementById('player-overlay').addEventListener('click', function(e) {
+  if (e.target === this) { sessionStorage.setItem('nc_scroll_' + window.location.pathname, window.scrollY); window.location.hash = ''; }
+});
 document.addEventListener('keydown',function(e){
   if(document.getElementById('gate-overlay').classList.contains('open')){if(e.key>='0'&&e.key<='9')gp(e.key);if(e.key==='Backspace'){e.preventDefault();gdel();}if(e.key==='Escape')closeGate();return;}
   if(e.key==='Escape')closePlayer();
