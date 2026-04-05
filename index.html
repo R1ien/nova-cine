@@ -264,29 +264,97 @@ async function playSeriesModal(id){
     document.getElementById('player-overlay').classList.add('open');
   }
 }
-function buildSeriesInfo(s,eps,activeEpId){
-  var epHtml=eps.map(function(ep){
-    var p=getProgress(ep.id);var pct=p?Math.min(100,p.percent):0;
-    var extra=p&&p.percent>2?(p.completed?' <span style="color:var(--green);font-size:.68rem">✓</span>':' <span style="color:var(--accent);font-size:.68rem">'+fmt(p.position)+'</span>'):'';
-    return '<div class="ep-row'+(ep.id===activeEpId?' playing':'')+'" onclick="switchEp(\''+ep.id+'\')">'
-      +'<div class="ep-n">S'+(ep.season_number||1)+'E'+(ep.episode_number||1)+'</div>'
-      +'<div class="ep-t">'+esc(ep.title)+extra+'</div>'
-      +(pct>2?'<div class="ep-bar"><div class="ep-bar-fill" style="width:'+pct+'%"></div></div>':'')
-      +'</div>';
+/* ── SÉRIES : listes déroulantes saison + épisode ── */
+function buildSeriesInfo(s, eps, activeEpId) {
+  // Construire la liste des saisons uniques
+  var seasons = [];
+  eps.forEach(function(ep) {
+    var sn = ep.season_number || 1;
+    if (seasons.indexOf(sn) === -1) seasons.push(sn);
+  });
+  seasons.sort(function(a,b){return a-b;});
+
+  // Saison active = saison de l'épisode actif
+  var activeEp = eps.find(function(e){return e.id===activeEpId;});
+  var activeSeason = activeEp ? (activeEp.season_number||1) : seasons[0];
+
+  // Épisodes de la saison active
+  var seasonEps = eps.filter(function(e){return (e.season_number||1)===activeSeason;});
+
+  var seasonOptions = seasons.map(function(sn){
+    return '<option value="'+sn+'"'+(sn===activeSeason?' selected':'')+'>Saison '+sn+'</option>';
   }).join('');
+
+  var epOptions = seasonEps.map(function(ep){
+    var p = getProgress(ep.id);
+    var label = 'Ep '+( ep.episode_number||1)+' — '+esc(ep.title);
+    if (p && p.percent > 2) label += p.completed ? ' ✓' : ' ('+fmt(p.position)+')';
+    return '<option value="'+ep.id+'"'+(ep.id===activeEpId?' selected':'')+'>'+label+'</option>';
+  }).join('');
+
+  var prog = activeEp ? getProgress(activeEp.id) : null;
+  var resumeInfo = (prog && prog.percent > 2 && !prog.completed)
+    ? ' · <span style="color:var(--accent)">Reprise à '+fmt(prog.position)+'</span>' : '';
+
   return '<div class="modal-title">'+esc(s.title)+'</div>'
-    +'<div class="modal-meta">'+esc(s.genre||'')+(s.year?' · '+s.year:'')+'</div>'
+    +'<div class="modal-meta">'+esc(s.genre||'')+(s.year?' · '+s.year:'')+resumeInfo+'</div>'
     +(s.description?'<div class="modal-desc">'+esc(s.description)+'</div>':'')
-    +(eps.length?'<div class="ep-list">'+epHtml+'</div>':'');
+    +(seasons.length>0?
+      '<div class="ep-selects">'
+      +'<select id="sel-season" onchange="onSeasonChange(this.value)" style="'
+      +'background:var(--surface2);border:1px solid var(--border);color:var(--text);'
+      +'padding:.5rem .8rem;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:.85rem;'
+      +'cursor:pointer;outline:none;flex:1;">'
+      +seasonOptions+'</select>'
+      +'<select id="sel-ep" onchange="onEpChange(this.value)" style="'
+      +'background:var(--surface2);border:1px solid var(--border);color:var(--text);'
+      +'padding:.5rem .8rem;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:.85rem;'
+      +'cursor:pointer;outline:none;flex:2;">'
+      +epOptions+'</select>'
+      +'</div>'
+    :'');
 }
-function switchEp(epId){
-  stopAutoSave();var eps=window._seps||[];var ep=eps.find(function(x){return x.id===epId;});if(!ep)return;
-  var p=getProgress(epId);var r=(p&&!p.completed)?p.position:0;
-  currentPlayCtx={type:'episode',id:epId,seriesId:window._sepsSeriesId};
-  buildPlayer(ep.video_url,r);
-  if(currentUser)startAutoSave(epId,false);
-  var sid=window._sepsSeriesId;var s=series.find(function(x){return x.id===sid;});
-  if(s)document.getElementById('player-info').innerHTML=buildSeriesInfo(s,eps,epId);
+
+function onSeasonChange(seasonNum) {
+  var eps = window._seps || [];
+  var sn = parseInt(seasonNum);
+  var seasonEps = eps.filter(function(e){return (e.season_number||1)===sn;});
+  var sel = document.getElementById('sel-ep');
+  if (!sel) return;
+  sel.innerHTML = seasonEps.map(function(ep){
+    var p = getProgress(ep.id);
+    var label = 'Ep '+(ep.episode_number||1)+' — '+esc(ep.title);
+    if (p && p.percent > 2) label += p.completed ? ' ✓' : ' ('+fmt(p.position)+')';
+    return '<option value="'+ep.id+'">'+label+'</option>';
+  }).join('');
+  // Auto-sélectionner et lancer le premier épisode de la saison
+  if (seasonEps.length) onEpChange(seasonEps[0].id);
+}
+
+function onEpChange(epId) {
+  var eps = window._seps || [];
+  var ep = eps.find(function(e){return e.id===epId;});
+  if (!ep) return;
+  // Mettre à jour le select visuellement
+  var sel = document.getElementById('sel-ep');
+  if (sel) sel.value = epId;
+  switchEp(epId);
+}
+
+function switchEp(epId) {
+  stopAutoSave();
+  var eps = window._seps || [];
+  var ep = eps.find(function(x){return x.id===epId;});
+  if (!ep) return;
+  var p = getProgress(epId);
+  var r = (p && !p.completed) ? p.position : 0;
+  currentPlayCtx = {type:'episode', id:epId, seriesId:window._sepsSeriesId};
+  buildPlayer(ep.video_url, r);
+  if (currentUser) startAutoSave(epId, false);
+  // Mettre à jour le panneau info
+  var sid = window._sepsSeriesId;
+  var s = series.find(function(x){return x.id===sid;});
+  if (s) document.getElementById('player-info').innerHTML = buildSeriesInfo(s, eps, epId);
 }
 
 function startAutoSave(id,isFilm){stopAutoSave();saveTimer=setInterval(function(){if(_vstPlayer&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,id,isFilm,playerCurrentTime(),playerDuration());},5000);}

@@ -473,3 +473,14 @@ nav {
   .section{padding:2.5rem 4rem;}
   .cards-row{grid-template-columns:repeat(auto-fill,minmax(175px,1fr));}
 }
+
+
+.ep-selects {
+  display: flex;
+  gap: .6rem;
+  margin-top: .9rem;
+  flex-wrap: wrap;
+}
+.ep-selects select:focus {
+  border-color: var(--accent);
+}

@@ -117,30 +117,78 @@ function videoType(u){var e=u.split('.').pop().split('?')[0].toLowerCase();retur
 
 function startSave(id){if(saveTimer)clearInterval(saveTimer);if(!currentUser)return;saveTimer=setInterval(function(){if(_vstPlayer&&playerDuration()>0)saveProgress(currentUser.id,id,false,vidEl.currentTime,vidEl.duration);},5000);}
 function stopSave(id){if(saveTimer){clearInterval(saveTimer);saveTimer=null;}if(id&&vidEl&&!isNaN(vidEl.duration)&&vidEl.duration>0&&currentUser)saveProgress(currentUser.id,id,false,vidEl.currentTime,vidEl.duration);}
-function buildInfo(s,eps,activeId){
-  var epHtml=eps.map(function(ep){var p=getProgress(ep.id);var pct=p?Math.min(100,p.percent):0;var extra=p&&p.percent>2?(p.completed?' <span style="color:var(--green);font-size:.68rem">✓</span>':' <span style="color:var(--accent);font-size:.68rem">'+fmt(p.position)+'</span>'):'';return '<div class="ep-row'+(ep.id===activeId?' playing':'')+'" onclick="switchEp(\''+ep.id+'\')">'+'<div class="ep-n">S'+(ep.season_number||1)+'E'+(ep.episode_number||1)+'</div>'+'<div class="ep-t">'+esc(ep.title)+extra+'</div>'+(pct>2?'<div class="ep-bar"><div class="ep-bar-fill" style="width:'+pct+'%"></div></div>':'')+'</div>';}).join('');
-  return '<div class="modal-title">'+esc(s.title)+'</div><div class="modal-meta">'+esc(s.genre||'')+(s.year?' · '+s.year:'')+'</div>'+(s.description?'<div class="modal-desc">'+esc(s.description)+'</div>':'')+(eps.length?'<div class="ep-list">'+epHtml+'</div>':'');
+function buildInfo(s, eps, activeId) {
+  var seasons = [];
+  eps.forEach(function(ep) {
+    var sn = ep.season_number || 1;
+    if (seasons.indexOf(sn) === -1) seasons.push(sn);
+  });
+  seasons.sort(function(a,b){return a-b;});
+
+  var activeEp = eps.find(function(e){return e.id===activeId;});
+  var activeSeason = activeEp ? (activeEp.season_number||1) : seasons[0];
+  var seasonEps = eps.filter(function(e){return (e.season_number||1)===activeSeason;});
+
+  var seasonOptions = seasons.map(function(sn){
+    return '<option value="'+sn+'"'+(sn===activeSeason?' selected':'')+'>Saison '+sn+'</option>';
+  }).join('');
+
+  var epOptions = seasonEps.map(function(ep){
+    var p = getProgress(ep.id);
+    var label = 'Ep '+(ep.episode_number||1)+' \u2014 '+esc(ep.title);
+    if (p && p.percent > 2) label += p.completed ? ' \u2713' : ' ('+fmt(p.position)+')';
+    return '<option value="'+ep.id+'"'+(ep.id===activeId?' selected':'')+'>'+label+'</option>';
+  }).join('');
+
+  var prog = activeEp ? getProgress(activeEp.id) : null;
+  var resumeInfo = (prog && prog.percent > 2 && !prog.completed)
+    ? ' \u00b7 <span style="color:var(--accent)">Reprise \u00e0 '+fmt(prog.position)+'</span>' : '';
+
+  return '<div class="modal-title">'+esc(s.title)+'</div>'
+    +'<div class="modal-meta">'+esc(s.genre||'')+(s.year?' \u00b7 '+s.year:'')+resumeInfo+'</div>'
+    +(s.description?'<div class="modal-desc">'+esc(s.description)+'</div>':'')
+    +(seasons.length>0
+      ?'<div class="ep-selects">'
+        +'<select id="sel-season" onchange="onSeasonChange(this.value)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.5rem .8rem;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:.85rem;cursor:pointer;outline:none;flex:1;">'+seasonOptions+'</select>'
+        +'<select id="sel-ep" onchange="onEpChange(this.value)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.5rem .8rem;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:.85rem;cursor:pointer;outline:none;flex:2;">'+epOptions+'</select>'
+        +'</div>'
+      :'');
 }
-async function playSeries(id){
-  var s=series.find(function(x){return x.id===id;});if(!s)return;
-  var eps=await loadEps(id);window._seps=eps;window._sobj=s;
-  var start=eps[0];for(var i=0;i<eps.length;i++){var p=getProgress(eps[i].id);if(!p||(p&&!p.completed)){start=eps[i];break;}}
-  if(start){
-    var p=getProgress(start.id);var r=(p&&!p.completed)?p.position:0;
-    currentPlayCtx={type:'episode',id:start.id};buildPlayer(start.video_url,r);
-    document.getElementById('player-info').innerHTML=buildInfo(s,eps,start.id);
-    document.getElementById('player-overlay').classList.add('open');var _slug=encodeURIComponent((s&&s.title||'serie').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''));history.pushState(null,'',window.location.pathname+'#lecteur-'+_slug);var _b=document.getElementById('nc-close-btn');if(_b)_b.style.display='flex';startSave(start.id);
-  } else {
-    document.getElementById('player-wrap').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:180px;color:var(--muted);font-size:.85rem">Aucun épisode.</div>';
-    document.getElementById('player-info').innerHTML=buildInfo(s,eps,null);document.getElementById('player-overlay').classList.add('open');var _slug2=encodeURIComponent((s&&s.title||'serie').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''));history.pushState(null,'',window.location.pathname+'#lecteur-'+_slug2);var _b2=document.getElementById('nc-close-btn');if(_b2)_b2.style.display='flex';
-  }
+
+function onSeasonChange(seasonNum) {
+  var eps = window._seps || [];
+  var sn = parseInt(seasonNum);
+  var seasonEps = eps.filter(function(e){return (e.season_number||1)===sn;});
+  var sel = document.getElementById('sel-ep');
+  if (!sel) return;
+  sel.innerHTML = seasonEps.map(function(ep){
+    var p = getProgress(ep.id);
+    var label = 'Ep '+(ep.episode_number||1)+' \u2014 '+esc(ep.title);
+    if (p && p.percent > 2) label += p.completed ? ' \u2713' : ' ('+fmt(p.position)+')';
+    return '<option value="'+ep.id+'">'+label+'</option>';
+  }).join('');
+  if (seasonEps.length) onEpChange(seasonEps[0].id);
 }
-function switchEp(epId){
-  var prevId=currentPlayCtx?currentPlayCtx.id:null;stopSave(prevId);
-  var eps=window._seps||[];var s=window._sobj;var ep=eps.find(function(x){return x.id===epId;});if(!ep)return;
-  var p=getProgress(epId);var r=(p&&!p.completed)?p.position:0;
-  currentPlayCtx={type:'episode',id:epId};buildPlayer(ep.video_url,r);
-  if(s)document.getElementById('player-info').innerHTML=buildInfo(s,eps,epId);startSave(epId);
+
+function onEpChange(epId) {
+  var sel = document.getElementById('sel-ep');
+  if (sel) sel.value = epId;
+  switchEp(epId);
+}
+
+function switchEp(epId) {
+  var prevId = currentPlayCtx ? currentPlayCtx.id : null;
+  stopSave(prevId);
+  var eps = window._seps || [];
+  var s = window._sobj;
+  var ep = eps.find(function(x){return x.id===epId;});
+  if (!ep) return;
+  var p = getProgress(epId);
+  var r = (p && !p.completed) ? p.position : 0;
+  currentPlayCtx = {type:'episode', id:epId};
+  buildPlayer(ep.video_url, r);
+  if (s) document.getElementById('player-info').innerHTML = buildInfo(s, eps, epId);
+  startSave(epId);
 }
 function closePlayer(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);document.getElementById('player-overlay').classList.remove('open');var _b=document.getElementById('nc-close-btn');if(_b)_b.style.display='none';playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;renderList(activeGenre==='Tous'?series:series.filter(function(s){return s.genre===activeGenre;}));}
 function togglePlay(){playerTogglePlay();}
