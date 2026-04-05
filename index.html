@@ -110,12 +110,19 @@
 
 <!-- ══ PLAYER ══ -->
 <div class="player-overlay" id="player-overlay">
-  <button class="modal-close" id="modal-close-btn">✕</button>
   <div class="player-modal">
     <div class="player-wrap" id="player-wrap"></div>
     <div class="modal-info" id="player-info"></div>
   </div>
 </div>
+<!-- Bouton fermer complètement séparé du lecteur -->
+<button id="nc-close-btn" style="
+  display:none;position:fixed;top:12px;right:12px;z-index:2147483647;
+  width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(0,0,0,.85);color:#fff;font-size:1.2rem;
+  align-items:center;justify-content:center;
+  box-shadow:0 2px 12px rgba(0,0,0,.5);
+">✕</button>
 
 <!-- ══ GATE ══ -->
 <div class="overlay" id="gate-overlay">
@@ -206,9 +213,9 @@ function renderContinue() {
 }
 
 // ── PLAY — delegates to player.js ──
-function openPlayer(url, r, html){buildPlayer(url,r);document.getElementById('player-info').innerHTML=html;document.getElementById('player-overlay').classList.add('open');}
+function openPlayer(url, r, html){buildPlayer(url,r);document.getElementById('player-info').innerHTML=html;document.getElementById('player-overlay').classList.add('open');var b=document.getElementById('nc-close-btn');if(b)b.style.display='flex';}
 
-function closePlayer(){stopAutoSave();document.getElementById('player-overlay').classList.remove('open');playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
+function closePlayer(){stopAutoSave();document.getElementById('player-overlay').classList.remove('open');var b=document.getElementById('nc-close-btn');if(b)b.style.display='none';playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
 function updateProg(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);}
 function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
 function skip(s){if(vidEl)vidEl.currentTime+=s;}
@@ -281,23 +288,11 @@ function gdel(){gbuf=gbuf.slice(0,-1);refreshDots();}
 function refreshDots(s){for(var i=0;i<GLEN;i++){var el=document.getElementById('d'+i);el.className='dot';if(s==='err')el.classList.add('err');else if(i<gbuf.length)el.classList.add('on');}}
 async function checkAdminCode(){var h=await sha256(gbuf);if(h===CORRECT_HASH){closeGate();window.location.href='admin.html';}else{refreshDots('err');setTimeout(function(){gbuf='';refreshDots();},700);}}
 
-/* Fermer le lecteur — capture:true passe avant tous les listeners Plyr */
-document.addEventListener('click', function(e) {
-  var overlay = document.getElementById('player-overlay');
-  if (!overlay || !overlay.classList.contains('open')) return;
-  /* Clic sur le bouton ✕ */
-  var btn = document.getElementById('modal-close-btn');
-  if (btn && (e.target === btn || btn.contains(e.target))) {
-    e.stopImmediatePropagation();
-    closePlayer();
-    return;
-  }
-  /* Clic en dehors du player-modal (sur le fond sombre) */
-  var modal = overlay.querySelector('.player-modal');
-  if (modal && !modal.contains(e.target)) {
-    closePlayer();
-  }
-}, true); /* true = capture phase, s'exécute avant Plyr */
+/* Bouton fermer — totalement indépendant de Plyr */
+var _ncCloseBtn = document.getElementById('nc-close-btn');
+if (_ncCloseBtn) {
+  _ncCloseBtn.onclick = function() { closePlayer(); };
+}
 document.getElementById('gate-overlay').addEventListener('click',function(e){if(e.target===this)closeGate();});
 document.addEventListener('keydown',function(e){
   if(document.getElementById('gate-overlay').classList.contains('open')){if(e.key>='0'&&e.key<='9')gp(e.key);if(e.key==='Backspace'){e.preventDefault();gdel();}if(e.key==='Escape')closeGate();return;}

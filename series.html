@@ -54,12 +54,19 @@
 </div>
 
 <div class="player-overlay" id="player-overlay">
-  <button class="modal-close" id="modal-close-btn">✕</button>
   <div class="player-modal">
     <div class="player-wrap" id="player-wrap"></div>
     <div class="modal-info" id="player-info"></div>
   </div>
 </div>
+<!-- Bouton fermer complètement séparé du lecteur -->
+<button id="nc-close-btn" style="
+  display:none;position:fixed;top:12px;right:12px;z-index:2147483647;
+  width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(0,0,0,.85);color:#fff;font-size:1.2rem;
+  align-items:center;justify-content:center;
+  box-shadow:0 2px 12px rgba(0,0,0,.5);
+">✕</button>
 <div class="notif" id="notif"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -130,23 +137,11 @@ function setVol(v){playerSetVol(v);}
 function toggleMute(){playerToggleMute();}
 function toggleFS(){playerToggleFS();}
 // seekV → player.js
-/* Fermer le lecteur — capture:true passe avant tous les listeners Plyr */
-document.addEventListener('click', function(e) {
-  var overlay = document.getElementById('player-overlay');
-  if (!overlay || !overlay.classList.contains('open')) return;
-  /* Clic sur le bouton ✕ */
-  var btn = document.getElementById('modal-close-btn');
-  if (btn && (e.target === btn || btn.contains(e.target))) {
-    e.stopImmediatePropagation();
-    closePlayer();
-    return;
-  }
-  /* Clic en dehors du player-modal (sur le fond sombre) */
-  var modal = overlay.querySelector('.player-modal');
-  if (modal && !modal.contains(e.target)) {
-    closePlayer();
-  }
-}, true); /* true = capture phase, s'exécute avant Plyr */
+/* Bouton fermer — totalement indépendant de Plyr */
+var _ncCloseBtn = document.getElementById('nc-close-btn');
+if (_ncCloseBtn) {
+  _ncCloseBtn.onclick = function() { closePlayer(); };
+}
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();playerKeydown(e);});
 window.addEventListener('beforeunload',function(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);});
 </script>
