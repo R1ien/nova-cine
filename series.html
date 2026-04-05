@@ -54,7 +54,7 @@
 </div>
 
 <div class="player-overlay" id="player-overlay">
-  <button class="modal-close" onclick="closePlayer()">✕</button>
+  <button class="modal-close" id="modal-close-btn">✕</button>
   <div class="player-modal">
     <div class="player-wrap" id="player-wrap"></div>
     <div class="modal-info" id="player-info"></div>
@@ -130,7 +130,16 @@ function setVol(v){playerSetVol(v);}
 function toggleMute(){playerToggleMute();}
 function toggleFS(){playerToggleFS();}
 // seekV → player.js
-document.getElementById('player-overlay').addEventListener('click',function(e){if(e.target===this)closePlayer();});
+/* Fermer le lecteur en cliquant sur le fond ou le bouton ✕ */
+(function() {
+  var overlay = document.getElementById('player-overlay');
+  var closeBtn = document.getElementById('modal-close-btn');
+  overlay.addEventListener('click', function(e) {
+    // Fermer si clic sur le fond (pas sur le modal lui-même)
+    if (e.target === overlay) closePlayer();
+  });
+  if (closeBtn) closeBtn.addEventListener('click', function() { closePlayer(); });
+})();
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();playerKeydown(e);});
 window.addEventListener('beforeunload',function(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);});
 </script>

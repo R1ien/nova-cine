@@ -110,7 +110,7 @@
 
 <!-- ══ PLAYER ══ -->
 <div class="player-overlay" id="player-overlay">
-  <button class="modal-close" onclick="closePlayer()">✕</button>
+  <button class="modal-close" id="modal-close-btn">✕</button>
   <div class="player-modal">
     <div class="player-wrap" id="player-wrap"></div>
     <div class="modal-info" id="player-info"></div>
@@ -281,7 +281,16 @@ function gdel(){gbuf=gbuf.slice(0,-1);refreshDots();}
 function refreshDots(s){for(var i=0;i<GLEN;i++){var el=document.getElementById('d'+i);el.className='dot';if(s==='err')el.classList.add('err');else if(i<gbuf.length)el.classList.add('on');}}
 async function checkAdminCode(){var h=await sha256(gbuf);if(h===CORRECT_HASH){closeGate();window.location.href='admin.html';}else{refreshDots('err');setTimeout(function(){gbuf='';refreshDots();},700);}}
 
-document.getElementById('player-overlay').addEventListener('click',function(e){if(e.target===this)closePlayer();});
+/* Fermer le lecteur en cliquant sur le fond ou le bouton ✕ */
+(function() {
+  var overlay = document.getElementById('player-overlay');
+  var closeBtn = document.getElementById('modal-close-btn');
+  overlay.addEventListener('click', function(e) {
+    // Fermer si clic sur le fond (pas sur le modal lui-même)
+    if (e.target === overlay) closePlayer();
+  });
+  if (closeBtn) closeBtn.addEventListener('click', function() { closePlayer(); });
+})();
 document.getElementById('gate-overlay').addEventListener('click',function(e){if(e.target===this)closeGate();});
 document.addEventListener('keydown',function(e){
   if(document.getElementById('gate-overlay').classList.contains('open')){if(e.key>='0'&&e.key<='9')gp(e.key);if(e.key==='Backspace'){e.preventDefault();gdel();}if(e.key==='Escape')closeGate();return;}

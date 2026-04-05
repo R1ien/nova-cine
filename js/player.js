@@ -172,16 +172,6 @@ async function buildPlayer(url, resumeAt) {
     showFallback(wrap, url, 'error');
   });
 
-  /* Réattacher le bouton ✕ avec capture:true pour passer avant Plyr */
-  var closeBtn = document.querySelector('.modal-close');
-  if (closeBtn) {
-    var newBtn = closeBtn.cloneNode(true); // clone = retire tous les anciens listeners
-    closeBtn.parentNode.replaceChild(newBtn, closeBtn);
-    newBtn.addEventListener('click', function(e) {
-      e.stopImmediatePropagation();
-      if (typeof closePlayer === 'function') closePlayer();
-    }, true);
-  }
 
   /* Sur iOS : intercepter le bouton fullscreen de Plyr
      pour utiliser le lecteur natif iOS à la place */
