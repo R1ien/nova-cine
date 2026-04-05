@@ -110,19 +110,12 @@
 
 <!-- ══ PLAYER ══ -->
 <div class="player-overlay" id="player-overlay">
+  <button class="modal-close" onclick="closePlayer()">✕</button>
   <div class="player-modal">
     <div class="player-wrap" id="player-wrap"></div>
     <div class="modal-info" id="player-info"></div>
   </div>
 </div>
-<!-- Bouton fermer complètement séparé du lecteur -->
-<button id="nc-close-btn" style="
-  display:none;position:fixed;top:12px;right:12px;z-index:2147483647;
-  width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
-  background:rgba(0,0,0,.85);color:#fff;font-size:1.2rem;
-  align-items:center;justify-content:center;
-  box-shadow:0 2px 12px rgba(0,0,0,.5);
-">✕</button>
 
 <!-- ══ GATE ══ -->
 <div class="overlay" id="gate-overlay">
@@ -148,18 +141,6 @@
 <script src="js/player.js"></script>
 <script src="js/nav.js"></script>
 <script>
-/* Restaurer le scroll après fermeture du lecteur */
-(function() {
-  if (!window.location.hash) {
-    var saved = sessionStorage.getItem('nc_scroll_' + window.location.pathname);
-    if (saved) {
-      sessionStorage.removeItem('nc_scroll_' + window.location.pathname);
-      window.addEventListener('load', function() {
-        setTimeout(function() { window.scrollTo(0, parseInt(saved)); }, 50);
-      });
-    }
-  }
-})();
 var CORRECT_HASH='', heroFilm=null, vidEl=null, currentPlayCtx=null, saveTimer=null, currentUser=null;
 sha256('1390').then(function(h){ CORRECT_HASH=h; });
 
@@ -225,9 +206,7 @@ function renderContinue() {
 }
 
 // ── PLAY — delegates to player.js ──
-function openPlayer(url, r, html, hashSlug){buildPlayer(url,r);document.getElementById('player-info').innerHTML=html;document.getElementById('player-overlay').classList.add('open');var b=document.getElementById('nc-close-btn');if(b)b.style.display='flex';history.pushState(null,'',window.location.pathname+(hashSlug?'#lecteur-'+hashSlug:'#lecteur'));}
 
-function closePlayer(){if(!document.getElementById('player-overlay').classList.contains('open'))return;stopAutoSave();document.getElementById('player-overlay').classList.remove('open');var b=document.getElementById('nc-close-btn');if(b)b.style.display='none';playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
 function updateProg(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);}
 function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
 function skip(s){if(vidEl)vidEl.currentTime+=s;}
@@ -370,22 +349,18 @@ function refreshDots(s){for(var i=0;i<GLEN;i++){var el=document.getElementById('
 async function checkAdminCode(){var h=await sha256(gbuf);if(h===CORRECT_HASH){closeGate();window.location.href='admin.html';}else{refreshDots('err');setTimeout(function(){gbuf='';refreshDots();},700);}}
 
 /* Fermer via popstate — fonctionne avec le bouton retour et le hash */
-window.addEventListener('hashchange', function() {
-  if (!window.location.hash) {
-    sessionStorage.setItem('nc_scroll_' + window.location.pathname, window.scrollY);
-    window.location.href = window.location.pathname;
-  }
-});
-var _ncCloseBtn = document.getElementById('nc-close-btn');
-if (_ncCloseBtn) _ncCloseBtn.onclick = function() {
-  sessionStorage.setItem('nc_scroll_' + window.location.pathname, window.scrollY);
-  window.location.hash = '';
-};
 document.getElementById('gate-overlay').addEventListener('click',function(e){if(e.target===this)closeGate();});
-/* Fond sombre cliquable */
-document.getElementById('player-overlay').addEventListener('click', function(e) {
-  if (e.target === this) { sessionStorage.setItem('nc_scroll_' + window.location.pathname, window.scrollY); window.location.hash = ''; }
-});
+
+/* ── Fermer le lecteur ── */
+(function() {
+  var overlay = document.getElementById('player-overlay');
+  if (!overlay) return;
+  /* Fond sombre */
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) closePlayer();
+  });
+})();
+
 document.addEventListener('keydown',function(e){
   if(document.getElementById('gate-overlay').classList.contains('open')){if(e.key>='0'&&e.key<='9')gp(e.key);if(e.key==='Backspace'){e.preventDefault();gdel();}if(e.key==='Escape')closeGate();return;}
   if(e.key==='Escape')closePlayer();

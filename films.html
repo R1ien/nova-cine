@@ -54,36 +54,17 @@
 </div>
 
 <div class="player-overlay" id="player-overlay">
+  <button class="modal-close" onclick="closePlayer()">✕</button>
   <div class="player-modal">
     <div class="player-wrap" id="player-wrap"></div>
     <div class="modal-info" id="player-info"></div>
   </div>
 </div>
-<!-- Bouton fermer complètement séparé du lecteur -->
-<button id="nc-close-btn" style="
-  display:none;position:fixed;top:12px;right:12px;z-index:2147483647;
-  width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
-  background:rgba(0,0,0,.85);color:#fff;font-size:1.2rem;
-  align-items:center;justify-content:center;
-  box-shadow:0 2px 12px rgba(0,0,0,.5);
-">✕</button>
 <div class="notif" id="notif"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="js/app.js"></script><script src="js/player.js"></script><script src="js/nav.js"></script>
 <script>
-/* Restaurer le scroll après fermeture du lecteur */
-(function() {
-  if (!window.location.hash) {
-    var saved = sessionStorage.getItem('nc_scroll_' + window.location.pathname);
-    if (saved) {
-      sessionStorage.removeItem('nc_scroll_' + window.location.pathname);
-      window.addEventListener('load', function() {
-        setTimeout(function() { window.scrollTo(0, parseInt(saved)); }, 50);
-      });
-    }
-  }
-})();
 var currentUser=null,currentPlayCtx=null,saveTimer=null,activeGenre='Tous';
 (async function(){
   initSB();currentUser=getSession();initNav('films');
@@ -121,13 +102,12 @@ function playFilm(id){
   currentPlayCtx={type:'film',id:id};buildPlayer(f.video_url,r);
   document.getElementById('player-info').innerHTML='<div class="modal-title">'+esc(f.title)+'</div><div class="modal-meta">'+esc(f.genre||'')+(f.year?' · '+f.year:'')+(r>2?' · <span style="color:var(--accent)">Reprise à '+fmt(r)+'</span>':'')+'</div>'+(f.description?'<div class="modal-desc">'+esc(f.description)+'</div>':'');
   document.getElementById('player-overlay').classList.add('open');
-  var _slug=encodeURIComponent(f.title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''));history.pushState(null,'',window.location.pathname+'#lecteur-'+_slug);var _b=document.getElementById('nc-close-btn');if(_b)_b.style.display='flex';
   if(currentUser){if(saveTimer)clearInterval(saveTimer);saveTimer=setInterval(function(){if(_vstPlayer&&playerDuration()>0)saveProgress(currentUser.id,id,true,playerCurrentTime(),playerDuration());},5000);}
 }
 function closePlayer(){
   if(saveTimer){clearInterval(saveTimer);saveTimer=null;}
   if(_vstPlayer&&currentPlayCtx&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());
-  document.getElementById('player-overlay').classList.remove('open');var _b=document.getElementById('nc-close-btn');if(_b)_b.style.display='none';playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;
+  document.getElementById('player-overlay').classList.remove('open');playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;
   renderFilms(activeGenre==='Tous'?films:films.filter(function(f){return f.genre===activeGenre;}));
 }
 function togglePlay(){playerTogglePlay();}
@@ -137,21 +117,17 @@ function toggleMute(){playerToggleMute();}
 function toggleFS(){playerToggleFS();}
 // seekV → player.js
 /* Fermer via popstate — fonctionne avec le bouton retour et le hash */
-window.addEventListener('hashchange', function() {
-  if (!window.location.hash) {
-    sessionStorage.setItem('nc_scroll_' + window.location.pathname, window.scrollY);
-    window.location.href = window.location.pathname;
-  }
-});
-var _ncCloseBtn = document.getElementById('nc-close-btn');
-if (_ncCloseBtn) _ncCloseBtn.onclick = function() {
-  sessionStorage.setItem('nc_scroll_' + window.location.pathname, window.scrollY);
-  window.location.hash = '';
-};
-/* Fond sombre cliquable */
-document.getElementById('player-overlay').addEventListener('click', function(e) {
-  if (e.target === this) { sessionStorage.setItem('nc_scroll_' + window.location.pathname, window.scrollY); window.location.hash = ''; }
-});
+
+/* ── Fermer le lecteur ── */
+(function() {
+  var overlay = document.getElementById('player-overlay');
+  if (!overlay) return;
+  /* Fond sombre */
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) closePlayer();
+  });
+})();
+
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();playerKeydown(e);});
 window.addEventListener('beforeunload',function(){if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());});
 </script>
