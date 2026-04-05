@@ -16,8 +16,8 @@
 @media(min-width:1200px){.page-wrap{padding:calc(var(--nav-h) + 2.5rem) 4rem 3rem;}}
 </style>
   <!-- Plyr -->
-  <link rel="stylesheet" href="https://cdn.plyr.io/3.8.4/plyr.css">
-  <script src="https://cdn.plyr.io/3.8.4/plyr.js"></script>
+  
+  
 </head>
 <body>
 <nav>
@@ -53,17 +53,8 @@
   <div class="cards-row" id="row-films"></div>
 </div>
 
-<div class="player-overlay" id="player-overlay">
-  <button class="modal-close" onclick="closePlayer()">✕</button>
-  <div class="player-modal">
-    <div class="player-wrap" id="player-wrap"></div>
-    <div class="modal-info" id="player-info"></div>
-  </div>
-</div>
-<div class="notif" id="notif"></div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script><script src="js/app.js"></script><script src="js/player.js"></script><script src="js/nav.js"></script>
+<script src="config.js"></script><script src="js/app.js"></script><script src="js/nav.js"></script>
 <script>
 var currentUser=null,currentPlayCtx=null,saveTimer=null,activeGenre='Tous';
 (async function(){
@@ -88,7 +79,7 @@ function renderFilms(list){
 function makeCard(f){
   var p=getProgress(f.id);var bar='',badge='';
   if(p&&p.percent>2&&!p.completed){bar='<div class="card-progress"><div class="card-progress-fill" style="width:'+Math.min(100,p.percent)+'%"></div></div>';badge='<div class="card-resume">REPRENDRE</div>';}
-  return '<div class="card" onclick="playFilm(\''+f.id+'\')">'
+  return '<div class="card" onclick="window.location.href='watch.html?id='+f.id+'&type=film'">'
     +(f.image_url?'<img data-src="'+esc(f.image_url)+'" alt="'+esc(f.title)+'" loading="lazy" decoding="async">':'<div class="card-no-img">'+svgFilm()+'</div>')
     +badge+'<div class="card-overlay"><div class="card-name">'+esc(f.title)+'</div><div class="card-meta">'+esc(f.genre||'')+' '+(f.year||'')+'</div></div>'
     +'<button class="card-play">▶</button>'+bar+'</div>';
@@ -96,20 +87,8 @@ function makeCard(f){
 function videoType(u){var e=u.split('.').pop().split('?')[0].toLowerCase();return({mp4:'video/mp4',mkv:'video/x-matroska',mov:'video/quicktime',avi:'video/x-msvideo',webm:'video/webm',ogv:'video/ogg',m4v:'video/mp4',flv:'video/x-flv'})[e]||'video/mp4';}
 // buildPlayer → player.js
 
-function playFilm(id){
-  var f=films.find(function(x){return x.id===id;});if(!f)return;
-  var p=getProgress(id);var r=(p&&!p.completed)?p.position:0;
-  currentPlayCtx={type:'film',id:id};buildPlayer(f.video_url,r);
-  document.getElementById('player-info').innerHTML='<div class="modal-title">'+esc(f.title)+'</div><div class="modal-meta">'+esc(f.genre||'')+(f.year?' · '+f.year:'')+(r>2?' · <span style="color:var(--accent)">Reprise à '+fmt(r)+'</span>':'')+'</div>'+(f.description?'<div class="modal-desc">'+esc(f.description)+'</div>':'');
-  document.getElementById('player-overlay').classList.add('open');
-  if(currentUser){if(saveTimer)clearInterval(saveTimer);saveTimer=setInterval(function(){if(_plyr&&playerDuration()>0)saveProgress(currentUser.id,id,true,playerCurrentTime(),playerDuration());},5000);}
-}
-function closePlayer(){
-  if(saveTimer){clearInterval(saveTimer);saveTimer=null;}
-  if(_plyr&&currentPlayCtx&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());
-  document.getElementById('player-overlay').classList.remove('open');playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;
-  renderFilms(activeGenre==='Tous'?films:films.filter(function(f){return f.genre===activeGenre;}));
-}
+
+
 function togglePlay(){playerTogglePlay();}
 function skip(s){playerSkip(s);}
 function setVol(v){playerSetVol(v);}
@@ -118,18 +97,10 @@ function toggleFS(){playerToggleFS();}
 // seekV → player.js
 /* Fermer via popstate — fonctionne avec le bouton retour et le hash */
 
-/* ── Fermer le lecteur ── */
-(function() {
-  var overlay = document.getElementById('player-overlay');
-  if (!overlay) return;
-  /* Fond sombre */
-  overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) closePlayer();
-  });
-})();
 
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();playerKeydown(e);});
 window.addEventListener('beforeunload',function(){if(vidEl&&currentPlayCtx&&!isNaN(vidEl.duration)&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,true,playerCurrentTime(),playerDuration());});
 </script>
+<!-- Bouton fermer HORS du DOM Plyr -->
 </body>
 </html>

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080c14">
+<title>NovaCiné</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdn.plyr.io/3.8.4/plyr.css">
+<script src="https://cdn.plyr.io/3.8.4/plyr.js"></script>
+<style>
+.watch-hero {
+  position: relative;
+  min-height: 60vw;
+  max-height: 520px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  padding-top: var(--nav-h);
+}
+.watch-hero-bg {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center top;
+  filter: brightness(.35) saturate(1.1);
+}
+.watch-hero-grad {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, var(--bg) 0%, transparent 60%),
+              linear-gradient(to right, rgba(8,12,20,.85) 30%, transparent 80%);
+}
+.watch-hero-content {
+  position: relative; z-index: 2;
+  display: flex; gap: 1.5rem; align-items: flex-end;
+  padding: 2rem 1rem 2.5rem;
+  width: 100%;
+}
+.watch-poster {
+  flex-shrink: 0;
+  width: 110px; border-radius: 10px;
+  overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.7);
+  display: none;
+}
+.watch-poster img { width: 100%; height: auto; display: block; }
+.watch-meta { flex: 1; min-width: 0; }
+.watch-badge {
+  display: inline-block; background: var(--accent); color: #000;
+  font-size: .6rem; font-weight: 700; letter-spacing: .15em;
+  padding: 2px 8px; border-radius: 3px; margin-bottom: .6rem;
+}
+.watch-title {
+  font-family: 'Bebas Neue', cursive;
+  font-size: clamp(2rem, 8vw, 4rem);
+  line-height: .95; margin-bottom: .5rem;
+}
+.watch-infos {
+  display: flex; flex-wrap: wrap; gap: .4rem .8rem;
+  font-size: .78rem; color: var(--muted); margin-bottom: .8rem;
+}
+.watch-infos span { display: flex; align-items: center; gap: .3rem; }
+.watch-desc {
+  font-size: .86rem; color: rgba(220,232,247,.7);
+  line-height: 1.65; max-width: 520px;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.watch-actions { display: flex; gap: .7rem; margin-top: 1.2rem; flex-wrap: wrap; }
+
+/* Section player */
+.watch-player-section { padding: 0 0 2rem; }
+.watch-player-wrap {
+  background: #000; width: 100%;
+  aspect-ratio: 16/9; max-width: 1200px;
+}
+
+/* Sélecteurs épisodes */
+.watch-ep-section { padding: 1.5rem 1rem 2rem; }
+.watch-ep-title { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+.watch-selects { display: flex; gap: .7rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+.watch-selects select {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: .55rem 1rem; border-radius: 8px;
+  font-family: 'DM Sans', sans-serif; font-size: .85rem;
+  cursor: pointer; outline: none; flex: 1; min-width: 130px;
+}
+.watch-selects select:focus { border-color: var(--accent); }
+
+/* Ep info bar */
+.watch-ep-info {
+  background: var(--surface); border-radius: 10px;
+  padding: .9rem 1.1rem; font-size: .84rem;
+  color: var(--muted); display: none;
+}
+.watch-ep-info strong { color: var(--text); display: block; margin-bottom: .2rem; }
+
+@media(min-width: 640px) {
+  .watch-poster { display: block; width: 140px; }
+  .watch-hero-content { padding: 2rem 2rem 3rem; }
+  .watch-ep-section { padding: 1.5rem 2rem 2rem; }
+}
+@media(min-width: 900px) {
+  .watch-poster { width: 170px; }
+  .watch-hero-content { padding: 2rem 3.5rem 3.5rem; gap: 2rem; }
+  .watch-ep-section { padding: 2rem 3.5rem 3rem; }
+  .watch-desc { -webkit-line-clamp: 5; }
+}
+@media(min-width: 1200px) {
+  .watch-hero-content { padding: 2rem 4rem 4rem; }
+  .watch-ep-section { padding: 2rem 4rem 3rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="logo" href="index.html">NOVA<span>CINÉ</span></a>
+  <div class="nav-links">
+    <a href="index.html" data-page="home">Accueil</a>
+    <a href="films.html" data-page="films">Films</a>
+    <a href="series.html" data-page="series">Séries</a>
+  </div>
+  <div class="nav-right">
+    <a class="nav-login-btn hidden" href="login.html">Se connecter</a>
+    <div class="user-badge" id="user-badge">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <span class="user-name" id="user-name-display"></span>
+      <button class="logout-btn" onclick="doLogout()">✕</button>
+    </div>
+    <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<!-- MOBILE DRAWER -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="index.html" data-page="home">🏠 Accueil</a>
+  <a href="films.html" data-page="films">🎬 Films</a>
+  <a href="series.html" data-page="series">📺 Séries</a>
+  <div class="mobile-menu-footer">
+    <a class="nav-login-btn hidden" href="login.html" style="display:flex;justify-content:center;">Se connecter →</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="watch-hero" id="watch-hero">
+  <div class="watch-hero-bg" id="watch-hero-bg"></div>
+  <div class="watch-hero-grad"></div>
+  <div class="watch-hero-content">
+    <div class="watch-poster" id="watch-poster">
+      <img id="watch-poster-img" src="" alt="">
+    </div>
+    <div class="watch-meta">
+      <div class="watch-badge" id="watch-badge">FILM</div>
+      <div class="watch-title" id="watch-title">Chargement…</div>
+      <div class="watch-infos" id="watch-infos"></div>
+      <div class="watch-desc" id="watch-desc"></div>
+      <div class="watch-actions">
+        <button class="btn-primary" id="btn-play" onclick="scrollToPlayer()">▶ Regarder</button>
+        <a class="btn-outline" href="javascript:history.back()">← Retour</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYER -->
+<div class="watch-player-section" id="watch-player-section">
+  <div class="watch-player-wrap" id="player-wrap"></div>
+</div>
+
+<!-- ÉPISODES (séries) -->
+<div class="watch-ep-section" id="watch-ep-section" style="display:none">
+  <div class="watch-ep-title">Épisodes</div>
+  <div class="watch-selects">
+    <select id="sel-season" onchange="onSeasonChange(this.value)"></select>
+    <select id="sel-ep" onchange="onEpChange(this.value)"></select>
+  </div>
+  <div class="watch-ep-info" id="watch-ep-info"></div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="js/app.js"></script>
+<script src="js/player.js"></script>
+<script src="js/nav.js"></script>
+<script>
+/* ════════════════════════════════════════
+   watch.html — page de lecture
+   URL : watch.html?id=<id>&type=film|series
+════════════════════════════════════════ */
+
+var currentUser = null;
+var currentPlayCtx = null;
+var saveTimer = null;
+var _contentType = 'film';
+var _contentId   = null;
+var _allEps      = [];
+var _seriesObj   = null;
+
+(async function init() {
+  initSB();
+  currentUser = getSession();
+  initNav('');
+  if (currentUser) await loadUserProgress(currentUser.id);
+
+  var params = new URLSearchParams(window.location.search);
+  _contentId   = params.get('id');
+  _contentType = params.get('type') || 'film';
+
+  if (!_contentId) { document.getElementById('watch-title').textContent = 'Contenu introuvable'; return; }
+
+  if (_contentType === 'film') {
+    await loadFilms();
+    var f = films.find(function(x){ return x.id == _contentId; });
+    if (!f) { document.getElementById('watch-title').textContent = 'Film introuvable'; return; }
+    await renderFilmPage(f);
+  } else {
+    await loadSeries();
+    var s = series.find(function(x){ return x.id == _contentId; });
+    if (!s) { document.getElementById('watch-title').textContent = 'Série introuvable'; return; }
+    await renderSeriesPage(s);
+  }
+})();
+
+/* ── FILM ── */
+async function renderFilmPage(f) {
+  document.title = f.title + ' — NovaCiné';
+  document.getElementById('watch-badge').textContent = 'FILM';
+  document.getElementById('watch-title').textContent = f.title;
+
+  // Infos locales
+  var infos = [];
+  if (f.year)  infos.push('<span>📅 ' + f.year  + '</span>');
+  if (f.genre) infos.push('<span>🎭 ' + esc(f.genre) + '</span>');
+  document.getElementById('watch-infos').innerHTML = infos.join('');
+  document.getElementById('watch-desc').textContent = f.description || '';
+
+  // Image de fond
+  if (f.image_url) {
+    document.getElementById('watch-hero-bg').style.backgroundImage = "url('" + f.image_url + "')";
+    document.getElementById('watch-poster-img').src = f.image_url;
+    document.getElementById('watch-poster').style.display = 'block';
+  }
+
+  // Métadonnées OMDB
+  fetchOmdb(f.title, f.year, function(meta) {
+    if (meta.poster && meta.poster !== 'N/A') {
+      document.getElementById('watch-hero-bg').style.backgroundImage = "url('" + meta.poster + "')";
+      document.getElementById('watch-poster-img').src = meta.poster;
+      document.getElementById('watch-poster').style.display = 'block';
+    }
+    if (meta.plot && meta.plot !== 'N/A' && !f.description)
+      document.getElementById('watch-desc').textContent = meta.plot;
+    if (meta.year && meta.year !== 'N/A' && !f.year) {
+      var el = document.getElementById('watch-infos');
+      el.innerHTML = '<span>📅 ' + meta.year + '</span>' + (f.genre ? '<span>🎭 '+esc(f.genre)+'</span>' : '') + (meta.runtime ? '<span>⏱ '+meta.runtime+'</span>' : '') + (meta.imdbRating && meta.imdbRating !== 'N/A' ? '<span>⭐ '+meta.imdbRating+'</span>' : '');
+    } else {
+      var extra = '';
+      if (meta.runtime && meta.runtime !== 'N/A') extra += '<span>⏱ ' + meta.runtime + '</span>';
+      if (meta.imdbRating && meta.imdbRating !== 'N/A') extra += '<span>⭐ ' + meta.imdbRating + '</span>';
+      if (extra) document.getElementById('watch-infos').innerHTML += extra;
+    }
+  });
+
+  // Lancer le player
+  var p = getProgress(_contentId);
+  var r = (p && !p.completed) ? p.position : 0;
+  currentPlayCtx = { type: 'film', id: _contentId };
+  await buildPlayer(f.video_url, r);
+  if (currentUser) startSave(_contentId, true);
+}
+
+/* ── SÉRIE ── */
+async function renderSeriesPage(s) {
+  _seriesObj = s;
+  document.title = s.title + ' — NovaCiné';
+  document.getElementById('watch-badge').textContent = 'SÉRIE';
+  document.getElementById('watch-title').textContent = s.title;
+
+  var infos = [];
+  if (s.year)  infos.push('<span>📅 ' + s.year  + '</span>');
+  if (s.genre) infos.push('<span>🎭 ' + esc(s.genre) + '</span>');
+  document.getElementById('watch-infos').innerHTML = infos.join('');
+  document.getElementById('watch-desc').textContent = s.description || '';
+
+  if (s.image_url) {
+    document.getElementById('watch-hero-bg').style.backgroundImage = "url('" + s.image_url + "')";
+    document.getElementById('watch-poster-img').src = s.image_url;
+    document.getElementById('watch-poster').style.display = 'block';
+  }
+
+  fetchOmdb(s.title, s.year, function(meta) {
+    if (meta.poster && meta.poster !== 'N/A') {
+      document.getElementById('watch-hero-bg').style.backgroundImage = "url('" + meta.poster + "')";
+      document.getElementById('watch-poster-img').src = meta.poster;
+      document.getElementById('watch-poster').style.display = 'block';
+    }
+    if (meta.plot && meta.plot !== 'N/A' && !s.description)
+      document.getElementById('watch-desc').textContent = meta.plot;
+    var extra = '';
+    if (meta.runtime && meta.runtime !== 'N/A') extra += '<span>⏱ ' + meta.runtime + '</span>';
+    if (meta.imdbRating && meta.imdbRating !== 'N/A') extra += '<span>⭐ ' + meta.imdbRating + '</span>';
+    if (extra) document.getElementById('watch-infos').innerHTML += extra;
+  });
+
+  // Charger les épisodes
+  _allEps = await loadEps(_contentId);
+  if (!_allEps.length) {
+    document.getElementById('watch-ep-section').style.display = 'block';
+    document.getElementById('watch-ep-section').innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:1rem 0">Aucun épisode disponible.</p>';
+    return;
+  }
+
+  // Trouver l'épisode à reprendre
+  var start = _allEps[0];
+  for (var i = 0; i < _allEps.length; i++) {
+    var pp = getProgress(_allEps[i].id);
+    if (!pp || !pp.completed) { start = _allEps[i]; break; }
+  }
+
+  buildEpSelects(start.id);
+  document.getElementById('watch-ep-section').style.display = 'block';
+
+  var p = getProgress(start.id);
+  var r = (p && !p.completed) ? p.position : 0;
+  currentPlayCtx = { type: 'episode', id: start.id };
+  await buildPlayer(start.video_url, r);
+  if (currentUser) startSave(start.id, false);
+}
+
+/* ── SÉLECTEURS ÉPISODES ── */
+function buildEpSelects(activeEpId) {
+  var seasons = [];
+  _allEps.forEach(function(ep) {
+    var sn = ep.season_number || 1;
+    if (seasons.indexOf(sn) === -1) seasons.push(sn);
+  });
+  seasons.sort(function(a,b){ return a-b; });
+
+  var activeEp = _allEps.find(function(e){ return e.id === activeEpId; });
+  var activeSeason = activeEp ? (activeEp.season_number || 1) : seasons[0];
+
+  var selSeason = document.getElementById('sel-season');
+  selSeason.innerHTML = seasons.map(function(sn) {
+    return '<option value="'+sn+'"'+(sn===activeSeason?' selected':'')+'>Saison '+sn+'</option>';
+  }).join('');
+
+  fillEpSelect(activeSeason, activeEpId);
+  updateEpInfo(activeEpId);
+}
+
+function fillEpSelect(seasonNum, activeEpId) {
+  var sn = parseInt(seasonNum);
+  var eps = _allEps.filter(function(e){ return (e.season_number||1) === sn; });
+  var sel = document.getElementById('sel-ep');
+  sel.innerHTML = eps.map(function(ep) {
+    var p = getProgress(ep.id);
+    var label = 'Ep '+(ep.episode_number||1)+' — '+esc(ep.title);
+    if (p && p.percent > 2) label += p.completed ? ' ✓' : ' ('+fmt(p.position)+')';
+    return '<option value="'+ep.id+'"'+(ep.id===activeEpId?' selected':'')+'>'+label+'</option>';
+  }).join('');
+}
+
+function updateEpInfo(epId) {
+  var ep = _allEps.find(function(e){ return e.id === epId; });
+  var box = document.getElementById('watch-ep-info');
+  if (!ep || !ep.description) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<strong>S'+(ep.season_number||1)+'E'+(ep.episode_number||1)+' — '+esc(ep.title)+'</strong>'+esc(ep.description);
+}
+
+async function onSeasonChange(val) {
+  fillEpSelect(parseInt(val), null);
+  var sel = document.getElementById('sel-ep');
+  if (sel && sel.value) await onEpChange(sel.value);
+}
+
+async function onEpChange(epId) {
+  var sel = document.getElementById('sel-ep');
+  if (sel) sel.value = epId;
+  updateEpInfo(epId);
+  var ep = _allEps.find(function(e){ return e.id === epId; });
+  if (!ep) return;
+  stopSave();
+  var p = getProgress(epId);
+  var r = (p && !p.completed) ? p.position : 0;
+  currentPlayCtx = { type: 'episode', id: epId };
+  await buildPlayer(ep.video_url, r);
+  if (currentUser) startSave(epId, false);
+}
+
+/* ── OMDB ── */
+function fetchOmdb(title, year, cb) {
+  // OMDB API — clé publique gratuite (demo)
+  var key = 'd0707527';
+  var url = 'https://www.omdbapi.com/?apikey=' + key + '&t=' + encodeURIComponent(title) + (year ? '&y=' + year : '') + '&plot=short';
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.Response === 'True') {
+        cb({ poster: d.Poster, plot: d.Plot, year: d.Year, runtime: d.Runtime, imdbRating: d.imdbRating });
+      } else {
+        cb({});
+      }
+    })
+    .catch(function(){ cb({}); });
+}
+
+/* ── AUTOSAVE ── */
+function startSave(id, isFilm) {
+  stopSave();
+  saveTimer = setInterval(function() {
+    if (currentUser && playerDuration() > 0)
+      saveProgress(currentUser.id, id, isFilm, playerCurrentTime(), playerDuration());
+  }, 5000);
+}
+function stopSave() {
+  if (saveTimer) { clearInterval(saveTimer); saveTimer = null; }
+  if (currentUser && currentPlayCtx && playerDuration() > 0)
+    saveProgress(currentUser.id, currentPlayCtx.id, currentPlayCtx.type === 'film', playerCurrentTime(), playerDuration());
+}
+
+function scrollToPlayer() {
+  var el = document.getElementById('watch-player-section');
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+window.addEventListener('beforeunload', stopSave);
+</script>
+</body>
+</html>

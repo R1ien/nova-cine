@@ -16,8 +16,8 @@
 @media(min-width:1200px){.page-wrap{padding:calc(var(--nav-h) + 2.5rem) 4rem 3rem;}}
 </style>
   <!-- Plyr -->
-  <link rel="stylesheet" href="https://cdn.plyr.io/3.8.4/plyr.css">
-  <script src="https://cdn.plyr.io/3.8.4/plyr.js"></script>
+  
+  
 </head>
 <body>
 <nav>
@@ -53,17 +53,8 @@
   <div class="cards-row" id="row-series"></div>
 </div>
 
-<div class="player-overlay" id="player-overlay">
-  <button class="modal-close" onclick="closePlayer()">✕</button>
-  <div class="player-modal">
-    <div class="player-wrap" id="player-wrap"></div>
-    <div class="modal-info" id="player-info"></div>
-  </div>
-</div>
-<div class="notif" id="notif"></div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script><script src="js/app.js"></script><script src="js/player.js"></script><script src="js/nav.js"></script>
+<script src="config.js"></script><script src="js/app.js"></script><script src="js/nav.js"></script>
 <script>
 var currentUser=null,currentPlayCtx=null,saveTimer=null,activeGenre='Tous';
 (async function(){
@@ -88,7 +79,7 @@ function renderList(list){
 function makeCard(s){
   var p=getProgress(s.id);var bar='',badge='';
   if(p&&p.percent>2&&!p.completed){bar='<div class="card-progress"><div class="card-progress-fill" style="width:'+Math.min(100,p.percent)+'%"></div></div>';badge='<div class="card-resume">REPRENDRE</div>';}
-  return '<div class="card" onclick="playSeries(\''+s.id+'\')">'
+  return '<div class="card" onclick="window.location.href='watch.html?id='+s.id+'&type=series'">'
     +(s.image_url?'<img data-src="'+esc(s.image_url)+'" alt="'+esc(s.title)+'" loading="lazy" decoding="async">':'<div class="card-no-img">'+svgSeries()+'</div>')
     +badge+'<div class="card-overlay"><div class="card-name">'+esc(s.title)+'</div><div class="card-meta">'+esc(s.genre||'')+' '+(s.year||'')+'</div></div>'
     +'<button class="card-play">▶</button>'+bar+'</div>';
@@ -96,82 +87,14 @@ function makeCard(s){
 function videoType(u){var e=u.split('.').pop().split('?')[0].toLowerCase();return({mp4:'video/mp4',mkv:'video/x-matroska',mov:'video/quicktime',avi:'video/x-msvideo',webm:'video/webm',ogv:'video/ogg',m4v:'video/mp4',flv:'video/x-flv'})[e]||'video/mp4';}
 // buildPlayer → player.js
 
-function startSave(id){if(saveTimer)clearInterval(saveTimer);if(!currentUser)return;saveTimer=setInterval(function(){if(_plyr&&playerDuration()>0)saveProgress(currentUser.id,id,false,vidEl.currentTime,vidEl.duration);},5000);}
-function stopSave(id){if(saveTimer){clearInterval(saveTimer);saveTimer=null;}if(id&&vidEl&&!isNaN(vidEl.duration)&&vidEl.duration>0&&currentUser)saveProgress(currentUser.id,id,false,vidEl.currentTime,vidEl.duration);}
-function buildInfo(s, eps, activeId) {
-  var seasons = [];
-  eps.forEach(function(ep) {
-    var sn = ep.season_number || 1;
-    if (seasons.indexOf(sn) === -1) seasons.push(sn);
-  });
-  seasons.sort(function(a,b){return a-b;});
 
-  var activeEp = eps.find(function(e){return e.id===activeId;});
-  var activeSeason = activeEp ? (activeEp.season_number||1) : seasons[0];
-  var seasonEps = eps.filter(function(e){return (e.season_number||1)===activeSeason;});
 
-  var seasonOptions = seasons.map(function(sn){
-    return '<option value="'+sn+'"'+(sn===activeSeason?' selected':'')+'>Saison '+sn+'</option>';
-  }).join('');
+async 
 
-  var epOptions = seasonEps.map(function(ep){
-    var p = getProgress(ep.id);
-    var label = 'Ep '+(ep.episode_number||1)+' \u2014 '+esc(ep.title);
-    if (p && p.percent > 2) label += p.completed ? ' \u2713' : ' ('+fmt(p.position)+')';
-    return '<option value="'+ep.id+'"'+(ep.id===activeId?' selected':'')+'>'+label+'</option>';
-  }).join('');
+async 
 
-  var prog = activeEp ? getProgress(activeEp.id) : null;
-  var resumeInfo = (prog && prog.percent > 2 && !prog.completed)
-    ? ' \u00b7 <span style="color:var(--accent)">Reprise \u00e0 '+fmt(prog.position)+'</span>' : '';
 
-  return '<div class="modal-title">'+esc(s.title)+'</div>'
-    +'<div class="modal-meta">'+esc(s.genre||'')+(s.year?' \u00b7 '+s.year:'')+resumeInfo+'</div>'
-    +(s.description?'<div class="modal-desc">'+esc(s.description)+'</div>':'')
-    +(seasons.length>0
-      ?'<div class="ep-selects">'
-        +'<select id="sel-season" onchange="onSeasonChange(this.value)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.5rem .8rem;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:.85rem;cursor:pointer;outline:none;flex:1;">'+seasonOptions+'</select>'
-        +'<select id="sel-ep" onchange="onEpChange(this.value)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.5rem .8rem;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:.85rem;cursor:pointer;outline:none;flex:2;">'+epOptions+'</select>'
-        +'</div>'
-      :'');
-}
-
-async function onSeasonChange(seasonNum) {
-  var eps = window._seps || [];
-  var sn = parseInt(seasonNum);
-  var seasonEps = eps.filter(function(e){return (e.season_number||1)===sn;});
-  var sel = document.getElementById('sel-ep');
-  if (!sel) return;
-  sel.innerHTML = seasonEps.map(function(ep){
-    var p = getProgress(ep.id);
-    var label = 'Ep '+(ep.episode_number||1)+' \u2014 '+esc(ep.title);
-    if (p && p.percent > 2) label += p.completed ? ' \u2713' : ' ('+fmt(p.position)+')';
-    return '<option value="'+ep.id+'">'+label+'</option>';
-  }).join('');
-  if (seasonEps.length) await onEpChange(seasonEps[0].id);
-}
-
-async function onEpChange(epId) {
-  var sel = document.getElementById('sel-ep');
-  if (sel) sel.value = epId;
-  await switchEp(epId);
-}
-
-async function switchEp(epId) {
-  var prevId = currentPlayCtx ? currentPlayCtx.id : null;
-  stopSave(prevId);
-  var eps = window._seps || [];
-  var s = window._sobj;
-  var ep = eps.find(function(x){return x.id===epId;});
-  if (!ep) return;
-  var p = getProgress(epId);
-  var r = (p && !p.completed) ? p.position : 0;
-  currentPlayCtx = {type:'episode', id:epId};
-  await buildPlayer(ep.video_url, r);
-  if (s) document.getElementById('player-info').innerHTML = buildInfo(s, eps, epId);
-  startSave(epId);
-}
-function closePlayer(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);document.getElementById('player-overlay').classList.remove('open');playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;renderList(activeGenre==='Tous'?series:series.filter(function(s){return s.genre===activeGenre;}));}
+function closePlayer(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);document.getElementById('player-overlay').classList.remove('open');playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;var _cb=document.getElementById('nc-close-btn');if(_cb)_cb.style.display='none';renderList(activeGenre==='Tous'?series:series.filter(function(s){return s.genre===activeGenre;}));}
 function togglePlay(){playerTogglePlay();}
 function skip(s){playerSkip(s);}
 function setVol(v){playerSetVol(v);}
@@ -180,18 +103,10 @@ function toggleFS(){playerToggleFS();}
 // seekV → player.js
 /* Fermer via popstate — fonctionne avec le bouton retour et le hash */
 
-/* ── Fermer le lecteur ── */
-(function() {
-  var overlay = document.getElementById('player-overlay');
-  if (!overlay) return;
-  /* Fond sombre */
-  overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) closePlayer();
-  });
-})();
 
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();playerKeydown(e);});
 window.addEventListener('beforeunload',function(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);});
 </script>
+<!-- Bouton fermer HORS du DOM Plyr -->
 </body>
 </html>

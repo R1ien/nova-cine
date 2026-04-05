@@ -37,8 +37,8 @@
 @media(min-width:1200px){.hero-banner{padding:0 4rem 5rem;}.continue-section{padding:2.5rem 4rem 0;}}
 </style>
   <!-- Plyr -->
-  <link rel="stylesheet" href="https://cdn.plyr.io/3.8.4/plyr.css">
-  <script src="https://cdn.plyr.io/3.8.4/plyr.js"></script>
+  
+  
 </head>
 <body>
 
@@ -108,13 +108,6 @@
   <div class="cards-scroll" id="row-series"></div>
 </div>
 
-<!-- ══ PLAYER ══ -->
-<div class="player-overlay" id="player-overlay">
-  <button class="modal-close" onclick="closePlayer()">✕</button>
-  <div class="player-modal">
-    <div class="player-wrap" id="player-wrap"></div>
-    <div class="modal-info" id="player-info"></div>
-  </div>
 </div>
 
 <!-- ══ GATE ══ -->
@@ -138,10 +131,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="js/app.js"></script>
-<script src="js/player.js"></script>
+
 <script src="js/nav.js"></script>
 <script>
-var CORRECT_HASH='', heroFilm=null, vidEl=null, currentPlayCtx=null, saveTimer=null, currentUser=null;
+var CORRECT_HASH='', heroFilm=null, currentUser=null;
 sha256('1390').then(function(h){ CORRECT_HASH=h; });
 
 (async function(){
@@ -165,10 +158,10 @@ function renderHero() {
   document.getElementById('hero-title').textContent = heroFilm.title;
   document.getElementById('hero-desc').textContent = heroFilm.description || 'Disponible en streaming.';
 }
-function heroPlay() { if (heroFilm) playFilm(heroFilm.id); }
+function heroPlay() { if (heroFilm) window.location.href='watch.html?id='+heroFilm.id+'&type=film'; }
 
 function makeCard(item, type) {
-  var fn = type==='film' ? "playFilm('"+item.id+"')" : "playSeriesModal('"+item.id+"')";
+  var fn = "window.location.href='watch.html?id="+item.id+"&type="+type+"'";
   var prog = getProgress(item.id);
   var bar='', badge='';
   if (prog && prog.percent>2 && !prog.completed) {
@@ -206,11 +199,6 @@ function renderContinue() {
 }
 
 // ── PLAY — delegates to player.js ──
-function openPlayer(url, r, html) {
-  buildPlayer(url, r);
-  document.getElementById('player-info').innerHTML = html || '';
-  document.getElementById('player-overlay').classList.add('open');
-}
 
 function updateProg(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);}
 function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
@@ -220,158 +208,9 @@ function toggleMute(){if(vidEl){vidEl.muted=!vidEl.muted;var sl=document.getElem
 function toggleFS(){var w=document.getElementById('player-wrap');if(!document.fullscreenElement){if(w.requestFullscreen)w.requestFullscreen();}else{if(document.exitFullscreen)document.exitFullscreen();}}
 function seekV(e){var b=document.getElementById('pbar');if(!vidEl||!b)return;var r=b.getBoundingClientRect();vidEl.currentTime=((e.clientX-r.left)/r.width)*vidEl.duration;}
 
-function playFilm(id){
-  var f=films.find(function(x){return x.id===id;});if(!f)return;
-  var p=getProgress(id);var r=(p&&!p.completed)?p.position:0;
-  currentPlayCtx={type:'film',id:id};
-  openPlayer(f.video_url,r,
-    '<div class="modal-title">'+esc(f.title)+'</div>'
-    +'<div class="modal-meta">'+esc(f.genre||'')+(f.year?' · '+f.year:'')+(r>2?' · <span style="color:var(--accent)">Reprise à '+fmt(r)+'</span>':'')+'</div>'
-    +(f.description?'<div class="modal-desc">'+esc(f.description)+'</div>':''),
-    encodeURIComponent(f.title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')));
-  if(currentUser)startAutoSave(id,true);
-}
-async function playSeriesModal(id){
-  var s=series.find(function(x){return x.id===id;});if(!s)return;
-  var eps=await loadEps(id);window._seps=eps;window._sepsSeriesId=id;
-  var start=eps[0];
-  for(var i=0;i<eps.length;i++){var p=getProgress(eps[i].id);if(!p||(p&&!p.completed)){start=eps[i];break;}}
-  var info=buildSeriesInfo(s,eps,start?start.id:null);
-  if(start){
-    var p=getProgress(start.id);var r=(p&&!p.completed)?p.position:0;
-    currentPlayCtx={type:'episode',id:start.id,seriesId:id};
-    openPlayer(start.video_url,r,info);
-    if(currentUser)startAutoSave(start.id,false);
-  } else {
-    document.getElementById('player-wrap').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:180px;color:var(--muted);font-size:.85rem">Aucun épisode disponible.</div>';
-    document.getElementById('player-info').innerHTML=info;
-    document.getElementById('player-overlay').classList.add('open');
-  }
-}
-/* ── SÉRIES : listes déroulantes saison + épisode ── */
-function buildSeriesInfo(s, eps, activeEpId) {
-  // Construire la liste des saisons uniques
-  var seasons = [];
-  eps.forEach(function(ep) {
-    var sn = ep.season_number || 1;
-    if (seasons.indexOf(sn) === -1) seasons.push(sn);
-  });
-  seasons.sort(function(a,b){return a-b;});
-
-  // Saison active = saison de l'épisode actif
-  var activeEp = eps.find(function(e){return e.id===activeEpId;});
-  var activeSeason = activeEp ? (activeEp.season_number||1) : seasons[0];
-
-  // Épisodes de la saison active
-  var seasonEps = eps.filter(function(e){return (e.season_number||1)===activeSeason;});
-
-  var seasonOptions = seasons.map(function(sn){
-    return '<option value="'+sn+'"'+(sn===activeSeason?' selected':'')+'>Saison '+sn+'</option>';
-  }).join('');
-
-  var epOptions = seasonEps.map(function(ep){
-    var p = getProgress(ep.id);
-    var label = 'Ep '+( ep.episode_number||1)+' — '+esc(ep.title);
-    if (p && p.percent > 2) label += p.completed ? ' ✓' : ' ('+fmt(p.position)+')';
-    return '<option value="'+ep.id+'"'+(ep.id===activeEpId?' selected':'')+'>'+label+'</option>';
-  }).join('');
-
-  var prog = activeEp ? getProgress(activeEp.id) : null;
-  var resumeInfo = (prog && prog.percent > 2 && !prog.completed)
-    ? ' · <span style="color:var(--accent)">Reprise à '+fmt(prog.position)+'</span>' : '';
-
-  return '<div class="modal-title">'+esc(s.title)+'</div>'
-    +'<div class="modal-meta">'+esc(s.genre||'')+(s.year?' · '+s.year:'')+resumeInfo+'</div>'
-    +(s.description?'<div class="modal-desc">'+esc(s.description)+'</div>':'')
-    +(seasons.length>0?
-      '<div class="ep-selects">'
-      +'<select id="sel-season" onchange="onSeasonChange(this.value)" style="'
-      +'background:var(--surface2);border:1px solid var(--border);color:var(--text);'
-      +'padding:.5rem .8rem;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:.85rem;'
-      +'cursor:pointer;outline:none;flex:1;">'
-      +seasonOptions+'</select>'
-      +'<select id="sel-ep" onchange="onEpChange(this.value)" style="'
-      +'background:var(--surface2);border:1px solid var(--border);color:var(--text);'
-      +'padding:.5rem .8rem;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:.85rem;'
-      +'cursor:pointer;outline:none;flex:2;">'
-      +epOptions+'</select>'
-      +'</div>'
-    :'');
-}
-
-async function onSeasonChange(seasonNum) {
-  var eps = window._seps || [];
-  var sn = parseInt(seasonNum);
-  var seasonEps = eps.filter(function(e){return (e.season_number||1)===sn;});
-  var sel = document.getElementById('sel-ep');
-  if (!sel) return;
-  sel.innerHTML = seasonEps.map(function(ep){
-    var p = getProgress(ep.id);
-    var label = 'Ep '+(ep.episode_number||1)+' — '+esc(ep.title);
-    if (p && p.percent > 2) label += p.completed ? ' ✓' : ' ('+fmt(p.position)+')';
-    return '<option value="'+ep.id+'">'+label+'</option>';
-  }).join('');
-  // Auto-sélectionner et lancer le premier épisode de la saison
-  if (seasonEps.length) await onEpChange(seasonEps[0].id);
-}
-
-function onEpChange(epId) {
-  var eps = window._seps || [];
-  var ep = eps.find(function(e){return e.id===epId;});
-  if (!ep) return;
-  // Mettre à jour le select visuellement
-  var sel = document.getElementById('sel-ep');
-  if (sel) sel.value = epId;
-  switchEp(epId);
-}
-
-async function switchEp(epId) {
-  stopAutoSave();
-  var eps = window._seps || [];
-  var ep = eps.find(function(x){return x.id===epId;});
-  if (!ep) return;
-  var p = getProgress(epId);
-  var r = (p && !p.completed) ? p.position : 0;
-  currentPlayCtx = {type:'episode', id:epId, seriesId:window._sepsSeriesId};
-  // Vider et afficher le spinner avant de charger
-  await buildPlayer(ep.video_url, r);
-  if (currentUser) startAutoSave(epId, false);
-  var sid = window._sepsSeriesId;
-  var s = series.find(function(x){return x.id===sid;});
-  if (s) document.getElementById('player-info').innerHTML = buildSeriesInfo(s, eps, epId);
-}
-
-function startAutoSave(id,isFilm){stopAutoSave();saveTimer=setInterval(function(){if(_vstPlayer&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,id,isFilm,playerCurrentTime(),playerDuration());},5000);}
-function stopAutoSave(){if(saveTimer){clearInterval(saveTimer);saveTimer=null;}if(_vstPlayer&&currentPlayCtx&&playerDuration()>0&&currentUser)saveProgress(currentUser.id,currentPlayCtx.id,currentPlayCtx.type==='film',playerCurrentTime(),playerDuration());}
-
-// Gate
-var gbuf='',GLEN=4;
-function openGate(){gbuf='';refreshDots();document.getElementById('gate-overlay').classList.add('open');var w=document.getElementById('wrench-btn');w.style.transform='rotate(90deg)';setTimeout(function(){w.style.transform='';},500);}
-function closeGate(){document.getElementById('gate-overlay').classList.remove('open');gbuf='';refreshDots();}
-function gp(d){if(gbuf.length>=GLEN)return;gbuf+=d;refreshDots();if(gbuf.length===GLEN)setTimeout(checkAdminCode,130);}
-function gdel(){gbuf=gbuf.slice(0,-1);refreshDots();}
-function refreshDots(s){for(var i=0;i<GLEN;i++){var el=document.getElementById('d'+i);el.className='dot';if(s==='err')el.classList.add('err');else if(i<gbuf.length)el.classList.add('on');}}
-async function checkAdminCode(){var h=await sha256(gbuf);if(h===CORRECT_HASH){closeGate();window.location.href='admin.html';}else{refreshDots('err');setTimeout(function(){gbuf='';refreshDots();},700);}}
-
-/* Fermer via popstate — fonctionne avec le bouton retour et le hash */
-document.getElementById('gate-overlay').addEventListener('click',function(e){if(e.target===this)closeGate();});
-
-/* ── Fermer le lecteur ── */
-(function() {
-  var overlay = document.getElementById('player-overlay');
-  if (!overlay) return;
-  /* Fond sombre */
-  overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) closePlayer();
-  });
-})();
-
-document.addEventListener('keydown',function(e){
-  if(document.getElementById('gate-overlay').classList.contains('open')){if(e.key>='0'&&e.key<='9')gp(e.key);if(e.key==='Backspace'){e.preventDefault();gdel();}if(e.key==='Escape')closeGate();return;}
-  if(e.key==='Escape')closePlayer();
-  playerKeydown(e);
-});
+);
 window.addEventListener('beforeunload',function(){stopAutoSave();});
 </script>
+<!-- Bouton fermer HORS du DOM Plyr -->
 </body>
 </html>
