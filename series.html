@@ -155,7 +155,7 @@ function buildInfo(s, eps, activeId) {
       :'');
 }
 
-function onSeasonChange(seasonNum) {
+async function onSeasonChange(seasonNum) {
   var eps = window._seps || [];
   var sn = parseInt(seasonNum);
   var seasonEps = eps.filter(function(e){return (e.season_number||1)===sn;});
@@ -167,16 +167,16 @@ function onSeasonChange(seasonNum) {
     if (p && p.percent > 2) label += p.completed ? ' \u2713' : ' ('+fmt(p.position)+')';
     return '<option value="'+ep.id+'">'+label+'</option>';
   }).join('');
-  if (seasonEps.length) onEpChange(seasonEps[0].id);
+  if (seasonEps.length) await onEpChange(seasonEps[0].id);
 }
 
-function onEpChange(epId) {
+async function onEpChange(epId) {
   var sel = document.getElementById('sel-ep');
   if (sel) sel.value = epId;
-  switchEp(epId);
+  await switchEp(epId);
 }
 
-function switchEp(epId) {
+async function switchEp(epId) {
   var prevId = currentPlayCtx ? currentPlayCtx.id : null;
   stopSave(prevId);
   var eps = window._seps || [];
@@ -186,7 +186,9 @@ function switchEp(epId) {
   var p = getProgress(epId);
   var r = (p && !p.completed) ? p.position : 0;
   currentPlayCtx = {type:'episode', id:epId};
-  buildPlayer(ep.video_url, r);
+  playerDispose();
+  document.getElementById('player-wrap').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;aspect-ratio:16/9;background:#000;"><div style="width:36px;height:36px;border:3px solid rgba(255,255,255,.1);border-top-color:#e8a020;border-radius:50%;animation:ncSpin .8s linear infinite;"></div></div><style>@keyframes ncSpin{to{transform:rotate(360deg)}}</style>';
+  await buildPlayer(ep.video_url, r);
   if (s) document.getElementById('player-info').innerHTML = buildInfo(s, eps, epId);
   startSave(epId);
 }

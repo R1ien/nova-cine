@@ -315,7 +315,7 @@ function buildSeriesInfo(s, eps, activeEpId) {
     :'');
 }
 
-function onSeasonChange(seasonNum) {
+async function onSeasonChange(seasonNum) {
   var eps = window._seps || [];
   var sn = parseInt(seasonNum);
   var seasonEps = eps.filter(function(e){return (e.season_number||1)===sn;});
@@ -328,7 +328,7 @@ function onSeasonChange(seasonNum) {
     return '<option value="'+ep.id+'">'+label+'</option>';
   }).join('');
   // Auto-sélectionner et lancer le premier épisode de la saison
-  if (seasonEps.length) onEpChange(seasonEps[0].id);
+  if (seasonEps.length) await onEpChange(seasonEps[0].id);
 }
 
 function onEpChange(epId) {
@@ -341,7 +341,7 @@ function onEpChange(epId) {
   switchEp(epId);
 }
 
-function switchEp(epId) {
+async function switchEp(epId) {
   stopAutoSave();
   var eps = window._seps || [];
   var ep = eps.find(function(x){return x.id===epId;});
@@ -349,9 +349,11 @@ function switchEp(epId) {
   var p = getProgress(epId);
   var r = (p && !p.completed) ? p.position : 0;
   currentPlayCtx = {type:'episode', id:epId, seriesId:window._sepsSeriesId};
-  buildPlayer(ep.video_url, r);
+  // Vider et afficher le spinner avant de charger
+  playerDispose();
+  document.getElementById('player-wrap').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;aspect-ratio:16/9;background:#000;"><div style="width:36px;height:36px;border:3px solid rgba(255,255,255,.1);border-top-color:#e8a020;border-radius:50%;animation:ncSpin .8s linear infinite;"></div></div><style>@keyframes ncSpin{to{transform:rotate(360deg)}}</style>';
+  await buildPlayer(ep.video_url, r);
   if (currentUser) startAutoSave(epId, false);
-  // Mettre à jour le panneau info
   var sid = window._sepsSeriesId;
   var s = series.find(function(x){return x.id===sid;});
   if (s) document.getElementById('player-info').innerHTML = buildSeriesInfo(s, eps, epId);
