@@ -278,11 +278,16 @@ async function showSeries(s) {
     return;
   }
 
-  // Trouver où reprendre
-  var start = _allEps[0];
-  for (var i = 0; i < _allEps.length; i++) {
-    var pp = getProgress(_allEps[i].id);
-    if (!pp || !pp.completed) { start = _allEps[i]; break; }
+  // Trouver où reprendre : d'abord le dernier épisode joué, sinon le premier non complété
+  var lastEpId = lload('nc_last_ep_' + _id, null);
+  var start = null;
+  if (lastEpId) start = _allEps.find(function(e){ return String(e.id) === String(lastEpId); });
+  if (!start) {
+    start = _allEps[0];
+    for (var i = 0; i < _allEps.length; i++) {
+      var pp = getProgress(_allEps[i].id);
+      if (!pp || !pp.completed) { start = _allEps[i]; break; }
+    }
   }
 
   buildEpSelects(start.id);
@@ -347,6 +352,7 @@ async function onEpChange(epId) {
   var ep = _allEps.find(function(e){return e.id===epId;});
   if (!ep) return;
   stopSave();
+  lsave('nc_last_ep_' + _id, epId); // Sauvegarder l'épisode courant
   var p = getProgress(epId);
   var r = (p && !p.completed) ? p.position : 0;
   currentPlayCtx = { type:'episode', id:epId };
@@ -401,6 +407,8 @@ function scrollToPlayer() {
 /* ════════ AUTOSAVE ════════ */
 function startSave(id, isFilm) {
   stopSave();
+  // Sauvegarder l'épisode courant dans localStorage
+  if (!isFilm) lsave('nc_last_ep_' + _id, id);
   saveTimer = setInterval(function(){
     if (currentUser && playerDuration()>0)
       saveProgress(currentUser.id, id, isFilm, playerCurrentTime(), playerDuration());
