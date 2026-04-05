@@ -72,7 +72,24 @@ async function buildPlayer(url, resumeAt) {
   var wrap = document.getElementById('player-wrap');
   if (!wrap) return;
 
-  // Détruire l'instance précédente
+  /* Si Plyr existe déjà et que c'est un lien direct (pas embed) :
+     changer la source directement sans détruire/recréer */
+  if (_plyr && !isEmbed(url)) {
+    showSpinner(wrap);
+    var check = await checkVideoUrl(url);
+    if (check.ok === false) { showFallback(wrap, url, check.reason); return; }
+    _plyr.source = {
+      type: 'video',
+      sources: [{ src: url, type: videoMime(url) }]
+    };
+    if (resumeAt > 0) {
+      _plyr.once('canplay', function() { _plyr.currentTime = resumeAt; });
+    }
+    _plyr.play().catch(function(){});
+    return;
+  }
+
+  // Première fois ou embed : détruire et recréer
   if (_plyr) {
     try { _plyr.destroy(); } catch(e) {}
     _plyr = null;
