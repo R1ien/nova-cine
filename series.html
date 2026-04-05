@@ -130,16 +130,23 @@ function setVol(v){playerSetVol(v);}
 function toggleMute(){playerToggleMute();}
 function toggleFS(){playerToggleFS();}
 // seekV → player.js
-/* Fermer le lecteur en cliquant sur le fond ou le bouton ✕ */
-(function() {
+/* Fermer le lecteur — capture:true passe avant tous les listeners Plyr */
+document.addEventListener('click', function(e) {
   var overlay = document.getElementById('player-overlay');
-  var closeBtn = document.getElementById('modal-close-btn');
-  overlay.addEventListener('click', function(e) {
-    // Fermer si clic sur le fond (pas sur le modal lui-même)
-    if (e.target === overlay) closePlayer();
-  });
-  if (closeBtn) closeBtn.addEventListener('click', function() { closePlayer(); });
-})();
+  if (!overlay || !overlay.classList.contains('open')) return;
+  /* Clic sur le bouton ✕ */
+  var btn = document.getElementById('modal-close-btn');
+  if (btn && (e.target === btn || btn.contains(e.target))) {
+    e.stopImmediatePropagation();
+    closePlayer();
+    return;
+  }
+  /* Clic en dehors du player-modal (sur le fond sombre) */
+  var modal = overlay.querySelector('.player-modal');
+  if (modal && !modal.contains(e.target)) {
+    closePlayer();
+  }
+}, true); /* true = capture phase, s'exécute avant Plyr */
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closePlayer();playerKeydown(e);});
 window.addEventListener('beforeunload',function(){var id=currentPlayCtx?currentPlayCtx.id:null;stopSave(id);});
 </script>

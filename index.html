@@ -281,16 +281,23 @@ function gdel(){gbuf=gbuf.slice(0,-1);refreshDots();}
 function refreshDots(s){for(var i=0;i<GLEN;i++){var el=document.getElementById('d'+i);el.className='dot';if(s==='err')el.classList.add('err');else if(i<gbuf.length)el.classList.add('on');}}
 async function checkAdminCode(){var h=await sha256(gbuf);if(h===CORRECT_HASH){closeGate();window.location.href='admin.html';}else{refreshDots('err');setTimeout(function(){gbuf='';refreshDots();},700);}}
 
-/* Fermer le lecteur en cliquant sur le fond ou le bouton ✕ */
-(function() {
+/* Fermer le lecteur — capture:true passe avant tous les listeners Plyr */
+document.addEventListener('click', function(e) {
   var overlay = document.getElementById('player-overlay');
-  var closeBtn = document.getElementById('modal-close-btn');
-  overlay.addEventListener('click', function(e) {
-    // Fermer si clic sur le fond (pas sur le modal lui-même)
-    if (e.target === overlay) closePlayer();
-  });
-  if (closeBtn) closeBtn.addEventListener('click', function() { closePlayer(); });
-})();
+  if (!overlay || !overlay.classList.contains('open')) return;
+  /* Clic sur le bouton ✕ */
+  var btn = document.getElementById('modal-close-btn');
+  if (btn && (e.target === btn || btn.contains(e.target))) {
+    e.stopImmediatePropagation();
+    closePlayer();
+    return;
+  }
+  /* Clic en dehors du player-modal (sur le fond sombre) */
+  var modal = overlay.querySelector('.player-modal');
+  if (modal && !modal.contains(e.target)) {
+    closePlayer();
+  }
+}, true); /* true = capture phase, s'exécute avant Plyr */
 document.getElementById('gate-overlay').addEventListener('click',function(e){if(e.target===this)closeGate();});
 document.addEventListener('keydown',function(e){
   if(document.getElementById('gate-overlay').classList.contains('open')){if(e.key>='0'&&e.key<='9')gp(e.key);if(e.key==='Backspace'){e.preventDefault();gdel();}if(e.key==='Escape')closeGate();return;}
