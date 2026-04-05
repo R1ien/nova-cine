@@ -10,109 +10,117 @@
 <link rel="stylesheet" href="https://cdn.plyr.io/3.8.4/plyr.css">
 <script src="https://cdn.plyr.io/3.8.4/plyr.js"></script>
 <style>
-.watch-hero {
+/* ── Hero ── */
+.w-hero {
   position: relative;
-  min-height: 60vw;
-  max-height: 520px;
-  display: flex;
-  align-items: flex-end;
-  overflow: hidden;
-  padding-top: var(--nav-h);
+  min-height: 55vw; max-height: 560px;
+  display: flex; align-items: flex-end;
+  overflow: hidden; padding-top: var(--nav-h);
 }
-.watch-hero-bg {
+.w-hero-bg {
   position: absolute; inset: 0;
   background-size: cover; background-position: center top;
-  filter: brightness(.35) saturate(1.1);
+  filter: brightness(.3) saturate(1.2);
 }
-.watch-hero-grad {
+.w-hero-grad {
   position: absolute; inset: 0;
-  background: linear-gradient(to top, var(--bg) 0%, transparent 60%),
-              linear-gradient(to right, rgba(8,12,20,.85) 30%, transparent 80%);
+  background:
+    linear-gradient(to top,  var(--bg) 0%, transparent 55%),
+    linear-gradient(to right, rgba(8,12,20,.9) 25%, transparent 75%);
 }
-.watch-hero-content {
+.w-hero-body {
   position: relative; z-index: 2;
-  display: flex; gap: 1.5rem; align-items: flex-end;
-  padding: 2rem 1rem 2.5rem;
-  width: 100%;
+  display: flex; gap: 1.4rem; align-items: flex-end;
+  padding: 1.5rem 1rem 2rem; width: 100%;
 }
-.watch-poster {
-  flex-shrink: 0;
-  width: 110px; border-radius: 10px;
-  overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.7);
+.w-poster {
+  flex-shrink: 0; width: 100px; border-radius: 10px;
+  overflow: hidden; box-shadow: 0 8px 28px rgba(0,0,0,.8);
   display: none;
 }
-.watch-poster img { width: 100%; height: auto; display: block; }
-.watch-meta { flex: 1; min-width: 0; }
-.watch-badge {
+.w-poster img { width: 100%; height: auto; display: block; }
+.w-meta { flex: 1; min-width: 0; }
+.w-badge {
   display: inline-block; background: var(--accent); color: #000;
-  font-size: .6rem; font-weight: 700; letter-spacing: .15em;
-  padding: 2px 8px; border-radius: 3px; margin-bottom: .6rem;
+  font-size: .6rem; font-weight: 700; letter-spacing: .14em;
+  padding: 2px 8px; border-radius: 3px; margin-bottom: .5rem;
 }
-.watch-title {
+.w-title {
   font-family: 'Bebas Neue', cursive;
-  font-size: clamp(2rem, 8vw, 4rem);
-  line-height: .95; margin-bottom: .5rem;
+  font-size: clamp(1.8rem, 7vw, 3.6rem);
+  line-height: .95; margin-bottom: .4rem;
 }
-.watch-infos {
-  display: flex; flex-wrap: wrap; gap: .4rem .8rem;
-  font-size: .78rem; color: var(--muted); margin-bottom: .8rem;
+.w-chips {
+  display: flex; flex-wrap: wrap; gap: .3rem .6rem;
+  font-size: .75rem; color: var(--muted); margin-bottom: .65rem;
 }
-.watch-infos span { display: flex; align-items: center; gap: .3rem; }
-.watch-desc {
-  font-size: .86rem; color: rgba(220,232,247,.7);
-  line-height: 1.65; max-width: 520px;
+.w-chips span { display: flex; align-items: center; gap: .25rem; }
+.w-desc {
+  font-size: .84rem; color: rgba(220,232,247,.7);
+  line-height: 1.65; max-width: 500px;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.watch-actions { display: flex; gap: .7rem; margin-top: 1.2rem; flex-wrap: wrap; }
+.w-actions { display: flex; gap: .6rem; margin-top: 1rem; flex-wrap: wrap; }
+.w-actions .btn-primary { font-size: .88rem; padding: .6rem 1.3rem; }
+.w-actions .btn-outline  { font-size: .88rem; padding: .6rem 1.1rem; }
 
-/* Section player */
-.watch-player-section { padding: 0 0 2rem; }
-.watch-player-wrap {
-  background: #000; width: 100%;
-  aspect-ratio: 16/9; max-width: 1200px;
+/* ── Player ── */
+.w-player-section { background: #000; }
+.w-player-wrap    { width: 100%; aspect-ratio: 16/9; max-width: 1280px; margin: 0 auto; background: #000; }
+
+/* ── Épisodes ── */
+.w-eps {
+  padding: 1.4rem 1rem 2rem;
 }
-
-/* Sélecteurs épisodes */
-.watch-ep-section { padding: 1.5rem 1rem 2rem; }
-.watch-ep-title { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
-.watch-selects { display: flex; gap: .7rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
-.watch-selects select {
+.w-eps-title { font-size: .95rem; font-weight: 600; margin-bottom: .9rem; color: var(--text); }
+.w-selects   { display: flex; gap: .6rem; flex-wrap: wrap; }
+.w-selects select {
   background: var(--surface2); border: 1px solid var(--border);
-  color: var(--text); padding: .55rem 1rem; border-radius: 8px;
-  font-family: 'DM Sans', sans-serif; font-size: .85rem;
-  cursor: pointer; outline: none; flex: 1; min-width: 130px;
+  color: var(--text); padding: .55rem .9rem; border-radius: 8px;
+  font-family: 'DM Sans', sans-serif; font-size: .84rem;
+  cursor: pointer; outline: none; flex: 1; min-width: 120px;
+  -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right .8rem center;
+  padding-right: 2rem;
 }
-.watch-selects select:focus { border-color: var(--accent); }
-
-/* Ep info bar */
-.watch-ep-info {
-  background: var(--surface); border-radius: 10px;
-  padding: .9rem 1.1rem; font-size: .84rem;
-  color: var(--muted); display: none;
+.w-selects select:focus { border-color: var(--accent); }
+.w-ep-desc {
+  margin-top: .9rem; padding: .8rem 1rem;
+  background: var(--surface); border-radius: 8px;
+  font-size: .82rem; color: var(--muted); line-height: 1.55;
+  display: none;
 }
-.watch-ep-info strong { color: var(--text); display: block; margin-bottom: .2rem; }
+.w-ep-desc strong { display: block; color: var(--text); margin-bottom: .25rem; font-size: .87rem; }
 
+/* ── Responsive ── */
+@media(min-width: 480px) {
+  .w-poster { display: block; }
+}
 @media(min-width: 640px) {
-  .watch-poster { display: block; width: 140px; }
-  .watch-hero-content { padding: 2rem 2rem 3rem; }
-  .watch-ep-section { padding: 1.5rem 2rem 2rem; }
+  .w-hero-body { padding: 2rem 2rem 2.5rem; gap: 1.8rem; }
+  .w-poster    { width: 130px; }
+  .w-desc      { -webkit-line-clamp: 4; }
+  .w-eps       { padding: 1.5rem 2rem 2.5rem; }
 }
 @media(min-width: 900px) {
-  .watch-poster { width: 170px; }
-  .watch-hero-content { padding: 2rem 3.5rem 3.5rem; gap: 2rem; }
-  .watch-ep-section { padding: 2rem 3.5rem 3rem; }
-  .watch-desc { -webkit-line-clamp: 5; }
+  .w-hero-body { padding: 2rem 3.5rem 3.5rem; gap: 2.2rem; }
+  .w-poster    { width: 160px; }
+  .w-desc      { -webkit-line-clamp: 5; }
+  .w-eps       { padding: 2rem 3.5rem 3rem; }
+  .w-selects select { flex: 0 1 auto; min-width: 0; }
+  #sel-season  { max-width: 160px; }
+  #sel-ep      { max-width: 420px; }
 }
 @media(min-width: 1200px) {
-  .watch-hero-content { padding: 2rem 4rem 4rem; }
-  .watch-ep-section { padding: 2rem 4rem 3rem; }
+  .w-hero-body { padding: 2rem 4rem 4rem; }
+  .w-eps       { padding: 2rem 4rem 3rem; }
 }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
 <nav>
   <a class="logo" href="index.html">NOVA<span>CINÉ</span></a>
   <div class="nav-links">
@@ -130,8 +138,6 @@
     <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
   </div>
 </nav>
-
-<!-- MOBILE DRAWER -->
 <div class="mobile-menu" id="mobile-menu">
   <a href="index.html" data-page="home">🏠 Accueil</a>
   <a href="films.html" data-page="films">🎬 Films</a>
@@ -142,20 +148,18 @@
 </div>
 
 <!-- HERO -->
-<div class="watch-hero" id="watch-hero">
-  <div class="watch-hero-bg" id="watch-hero-bg"></div>
-  <div class="watch-hero-grad"></div>
-  <div class="watch-hero-content">
-    <div class="watch-poster" id="watch-poster">
-      <img id="watch-poster-img" src="" alt="">
-    </div>
-    <div class="watch-meta">
-      <div class="watch-badge" id="watch-badge">FILM</div>
-      <div class="watch-title" id="watch-title">Chargement…</div>
-      <div class="watch-infos" id="watch-infos"></div>
-      <div class="watch-desc" id="watch-desc"></div>
-      <div class="watch-actions">
-        <button class="btn-primary" id="btn-play" onclick="scrollToPlayer()">▶ Regarder</button>
+<div class="w-hero" id="w-hero">
+  <div class="w-hero-bg" id="w-bg"></div>
+  <div class="w-hero-grad"></div>
+  <div class="w-hero-body">
+    <div class="w-poster" id="w-poster"><img id="w-poster-img" src="" alt=""></div>
+    <div class="w-meta">
+      <div class="w-badge" id="w-badge">FILM</div>
+      <div class="w-title" id="w-title">Chargement…</div>
+      <div class="w-chips" id="w-chips"></div>
+      <div class="w-desc"  id="w-desc"></div>
+      <div class="w-actions">
+        <button class="btn-primary" onclick="scrollToPlayer()">▶ Regarder</button>
         <a class="btn-outline" href="javascript:history.back()">← Retour</a>
       </div>
     </div>
@@ -163,18 +167,18 @@
 </div>
 
 <!-- PLAYER -->
-<div class="watch-player-section" id="watch-player-section">
-  <div class="watch-player-wrap" id="player-wrap"></div>
+<div class="w-player-section">
+  <div class="w-player-wrap" id="player-wrap"></div>
 </div>
 
-<!-- ÉPISODES (séries) -->
-<div class="watch-ep-section" id="watch-ep-section" style="display:none">
-  <div class="watch-ep-title">Épisodes</div>
-  <div class="watch-selects">
+<!-- ÉPISODES -->
+<div class="w-eps" id="w-eps" style="display:none">
+  <div class="w-eps-title">Épisodes</div>
+  <div class="w-selects">
     <select id="sel-season" onchange="onSeasonChange(this.value)"></select>
-    <select id="sel-ep" onchange="onEpChange(this.value)"></select>
+    <select id="sel-ep"     onchange="onEpChange(this.value)"></select>
   </div>
-  <div class="watch-ep-info" id="watch-ep-info"></div>
+  <div class="w-ep-desc" id="w-ep-desc"></div>
 </div>
 
 <div class="notif" id="notif"></div>
@@ -185,134 +189,96 @@
 <script src="js/player.js"></script>
 <script src="js/nav.js"></script>
 <script>
-/* ════════════════════════════════════════
-   watch.html — page de lecture
-   URL : watch.html?id=<id>&type=film|series
-════════════════════════════════════════ */
+var currentUser = null, currentPlayCtx = null, saveTimer = null;
+var _type = 'film', _id = null, _allEps = [], _seriesObj = null;
 
-var currentUser = null;
-var currentPlayCtx = null;
-var saveTimer = null;
-var _contentType = 'film';
-var _contentId   = null;
-var _allEps      = [];
-var _seriesObj   = null;
-
-(async function init() {
+(async function(){
   initSB();
   currentUser = getSession();
   initNav('');
   if (currentUser) await loadUserProgress(currentUser.id);
 
-  var params = new URLSearchParams(window.location.search);
-  _contentId   = params.get('id');
-  _contentType = params.get('type') || 'film';
+  var p = new URLSearchParams(window.location.search);
+  _id   = p.get('id');
+  _type = p.get('type') || 'film';
 
-  if (!_contentId) { document.getElementById('watch-title').textContent = 'Contenu introuvable'; return; }
+  if (!_id) { document.getElementById('w-title').textContent = 'Contenu introuvable'; return; }
 
-  if (_contentType === 'film') {
+  if (_type === 'film') {
     await loadFilms();
-    var f = films.find(function(x){ return x.id == _contentId; });
-    if (!f) { document.getElementById('watch-title').textContent = 'Film introuvable'; return; }
-    await renderFilmPage(f);
+    var f = films.find(function(x){ return String(x.id) === String(_id); });
+    if (!f) { document.getElementById('w-title').textContent = 'Film introuvable'; return; }
+    await showFilm(f);
   } else {
     await loadSeries();
-    var s = series.find(function(x){ return x.id == _contentId; });
-    if (!s) { document.getElementById('watch-title').textContent = 'Série introuvable'; return; }
-    await renderSeriesPage(s);
+    var s = series.find(function(x){ return String(x.id) === String(_id); });
+    if (!s) { document.getElementById('w-title').textContent = 'Série introuvable'; return; }
+    await showSeries(s);
   }
 })();
 
-/* ── FILM ── */
-async function renderFilmPage(f) {
+/* ════════ FILM ════════ */
+async function showFilm(f) {
   document.title = f.title + ' — NovaCiné';
-  document.getElementById('watch-badge').textContent = 'FILM';
-  document.getElementById('watch-title').textContent = f.title;
+  document.getElementById('w-badge').textContent = 'FILM';
+  document.getElementById('w-title').textContent  = f.title;
 
-  // Infos locales
-  var infos = [];
-  if (f.year)  infos.push('<span>📅 ' + f.year  + '</span>');
-  if (f.genre) infos.push('<span>🎭 ' + esc(f.genre) + '</span>');
-  document.getElementById('watch-infos').innerHTML = infos.join('');
-  document.getElementById('watch-desc').textContent = f.description || '';
+  var chips = [];
+  if (f.year)  chips.push('<span>📅 '+f.year+'</span>');
+  if (f.genre) chips.push('<span>🎭 '+esc(f.genre)+'</span>');
+  document.getElementById('w-chips').innerHTML = chips.join('');
+  document.getElementById('w-desc').textContent  = f.description || '';
 
-  // Image de fond
-  if (f.image_url) {
-    document.getElementById('watch-hero-bg').style.backgroundImage = "url('" + f.image_url + "')";
-    document.getElementById('watch-poster-img').src = f.image_url;
-    document.getElementById('watch-poster').style.display = 'block';
-  }
+  if (f.image_url) setImage(f.image_url);
 
-  // Métadonnées OMDB
-  fetchOmdb(f.title, f.year, function(meta) {
-    if (meta.poster && meta.poster !== 'N/A') {
-      document.getElementById('watch-hero-bg').style.backgroundImage = "url('" + meta.poster + "')";
-      document.getElementById('watch-poster-img').src = meta.poster;
-      document.getElementById('watch-poster').style.display = 'block';
-    }
-    if (meta.plot && meta.plot !== 'N/A' && !f.description)
-      document.getElementById('watch-desc').textContent = meta.plot;
-    if (meta.year && meta.year !== 'N/A' && !f.year) {
-      var el = document.getElementById('watch-infos');
-      el.innerHTML = '<span>📅 ' + meta.year + '</span>' + (f.genre ? '<span>🎭 '+esc(f.genre)+'</span>' : '') + (meta.runtime ? '<span>⏱ '+meta.runtime+'</span>' : '') + (meta.imdbRating && meta.imdbRating !== 'N/A' ? '<span>⭐ '+meta.imdbRating+'</span>' : '');
-    } else {
-      var extra = '';
-      if (meta.runtime && meta.runtime !== 'N/A') extra += '<span>⏱ ' + meta.runtime + '</span>';
-      if (meta.imdbRating && meta.imdbRating !== 'N/A') extra += '<span>⭐ ' + meta.imdbRating + '</span>';
-      if (extra) document.getElementById('watch-infos').innerHTML += extra;
-    }
+  // Métadonnées OMDB avec description en français
+  fetchMeta(f.title, f.year, 'movie', function(meta) {
+    if (meta.poster && !f.image_url) setImage(meta.poster);
+    if (meta.plot && !f.description) document.getElementById('w-desc').textContent = meta.plot;
+    var extra = '';
+    if (meta.runtime)    extra += '<span>⏱ '+meta.runtime+'</span>';
+    if (meta.imdbRating) extra += '<span>⭐ '+meta.imdbRating+'/10</span>';
+    if (extra) document.getElementById('w-chips').innerHTML += extra;
   });
 
-  // Lancer le player
-  var p = getProgress(_contentId);
-  var r = (p && !p.completed) ? p.position : 0;
-  currentPlayCtx = { type: 'film', id: _contentId };
+  var prog = getProgress(_id);
+  var r    = (prog && !prog.completed) ? prog.position : 0;
+  currentPlayCtx = { type:'film', id:_id };
   await buildPlayer(f.video_url, r);
-  if (currentUser) startSave(_contentId, true);
+  if (currentUser) startSave(_id, true);
 }
 
-/* ── SÉRIE ── */
-async function renderSeriesPage(s) {
+/* ════════ SÉRIE ════════ */
+async function showSeries(s) {
   _seriesObj = s;
   document.title = s.title + ' — NovaCiné';
-  document.getElementById('watch-badge').textContent = 'SÉRIE';
-  document.getElementById('watch-title').textContent = s.title;
+  document.getElementById('w-badge').textContent = 'SÉRIE';
+  document.getElementById('w-title').textContent  = s.title;
 
-  var infos = [];
-  if (s.year)  infos.push('<span>📅 ' + s.year  + '</span>');
-  if (s.genre) infos.push('<span>🎭 ' + esc(s.genre) + '</span>');
-  document.getElementById('watch-infos').innerHTML = infos.join('');
-  document.getElementById('watch-desc').textContent = s.description || '';
+  var chips = [];
+  if (s.year)  chips.push('<span>📅 '+s.year+'</span>');
+  if (s.genre) chips.push('<span>🎭 '+esc(s.genre)+'</span>');
+  document.getElementById('w-chips').innerHTML = chips.join('');
+  document.getElementById('w-desc').textContent = s.description || '';
 
-  if (s.image_url) {
-    document.getElementById('watch-hero-bg').style.backgroundImage = "url('" + s.image_url + "')";
-    document.getElementById('watch-poster-img').src = s.image_url;
-    document.getElementById('watch-poster').style.display = 'block';
-  }
+  if (s.image_url) setImage(s.image_url);
 
-  fetchOmdb(s.title, s.year, function(meta) {
-    if (meta.poster && meta.poster !== 'N/A') {
-      document.getElementById('watch-hero-bg').style.backgroundImage = "url('" + meta.poster + "')";
-      document.getElementById('watch-poster-img').src = meta.poster;
-      document.getElementById('watch-poster').style.display = 'block';
-    }
-    if (meta.plot && meta.plot !== 'N/A' && !s.description)
-      document.getElementById('watch-desc').textContent = meta.plot;
+  fetchMeta(s.title, s.year, 'series', function(meta) {
+    if (meta.poster && !s.image_url) setImage(meta.poster);
+    if (meta.plot && !s.description) document.getElementById('w-desc').textContent = meta.plot;
     var extra = '';
-    if (meta.runtime && meta.runtime !== 'N/A') extra += '<span>⏱ ' + meta.runtime + '</span>';
-    if (meta.imdbRating && meta.imdbRating !== 'N/A') extra += '<span>⭐ ' + meta.imdbRating + '</span>';
-    if (extra) document.getElementById('watch-infos').innerHTML += extra;
+    if (meta.imdbRating) extra += '<span>⭐ '+meta.imdbRating+'/10</span>';
+    if (extra) document.getElementById('w-chips').innerHTML += extra;
   });
 
-  // Charger les épisodes
-  _allEps = await loadEps(_contentId);
+  _allEps = await loadEps(_id);
   if (!_allEps.length) {
-    document.getElementById('watch-ep-section').style.display = 'block';
-    document.getElementById('watch-ep-section').innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:1rem 0">Aucun épisode disponible.</p>';
+    document.getElementById('w-eps').style.display = 'block';
+    document.getElementById('w-eps').innerHTML = '<p style="color:var(--muted);font-size:.85rem;">Aucun épisode disponible.</p>';
     return;
   }
 
-  // Trouver l'épisode à reprendre
+  // Trouver où reprendre
   var start = _allEps[0];
   for (var i = 0; i < _allEps.length; i++) {
     var pp = getProgress(_allEps[i].id);
@@ -320,52 +286,50 @@ async function renderSeriesPage(s) {
   }
 
   buildEpSelects(start.id);
-  document.getElementById('watch-ep-section').style.display = 'block';
+  document.getElementById('w-eps').style.display = 'block';
 
-  var p = getProgress(start.id);
-  var r = (p && !p.completed) ? p.position : 0;
-  currentPlayCtx = { type: 'episode', id: start.id };
+  var prog = getProgress(start.id);
+  var r    = (prog && !prog.completed) ? prog.position : 0;
+  currentPlayCtx = { type:'episode', id:start.id };
   await buildPlayer(start.video_url, r);
   if (currentUser) startSave(start.id, false);
 }
 
-/* ── SÉLECTEURS ÉPISODES ── */
-function buildEpSelects(activeEpId) {
+/* ════════ ÉPISODES ════════ */
+function buildEpSelects(activeId) {
   var seasons = [];
-  _allEps.forEach(function(ep) {
-    var sn = ep.season_number || 1;
-    if (seasons.indexOf(sn) === -1) seasons.push(sn);
+  _allEps.forEach(function(e){
+    var sn = e.season_number||1;
+    if (seasons.indexOf(sn)===-1) seasons.push(sn);
   });
-  seasons.sort(function(a,b){ return a-b; });
+  seasons.sort(function(a,b){return a-b;});
 
-  var activeEp = _allEps.find(function(e){ return e.id === activeEpId; });
-  var activeSeason = activeEp ? (activeEp.season_number || 1) : seasons[0];
+  var activeEp     = _allEps.find(function(e){return e.id===activeId;});
+  var activeSeason = activeEp ? (activeEp.season_number||1) : seasons[0];
 
-  var selSeason = document.getElementById('sel-season');
-  selSeason.innerHTML = seasons.map(function(sn) {
+  document.getElementById('sel-season').innerHTML = seasons.map(function(sn){
     return '<option value="'+sn+'"'+(sn===activeSeason?' selected':'')+'>Saison '+sn+'</option>';
   }).join('');
 
-  fillEpSelect(activeSeason, activeEpId);
-  updateEpInfo(activeEpId);
+  fillEpSelect(activeSeason, activeId);
+  showEpDesc(activeId);
 }
 
-function fillEpSelect(seasonNum, activeEpId) {
-  var sn = parseInt(seasonNum);
-  var eps = _allEps.filter(function(e){ return (e.season_number||1) === sn; });
-  var sel = document.getElementById('sel-ep');
-  sel.innerHTML = eps.map(function(ep) {
+function fillEpSelect(sn, activeId) {
+  sn = parseInt(sn);
+  var eps = _allEps.filter(function(e){return (e.season_number||1)===sn;});
+  document.getElementById('sel-ep').innerHTML = eps.map(function(ep){
     var p = getProgress(ep.id);
-    var label = 'Ep '+(ep.episode_number||1)+' — '+esc(ep.title);
-    if (p && p.percent > 2) label += p.completed ? ' ✓' : ' ('+fmt(p.position)+')';
-    return '<option value="'+ep.id+'"'+(ep.id===activeEpId?' selected':'')+'>'+label+'</option>';
+    var lbl = 'Ep '+(ep.episode_number||1)+' — '+esc(ep.title);
+    if (p && p.percent>2) lbl += p.completed ? ' ✓' : ' ('+fmt(p.position)+')';
+    return '<option value="'+ep.id+'"'+(ep.id===activeId?' selected':'')+'>'+lbl+'</option>';
   }).join('');
 }
 
-function updateEpInfo(epId) {
-  var ep = _allEps.find(function(e){ return e.id === epId; });
-  var box = document.getElementById('watch-ep-info');
-  if (!ep || !ep.description) { box.style.display = 'none'; return; }
+function showEpDesc(epId) {
+  var ep  = _allEps.find(function(e){return e.id===epId;});
+  var box = document.getElementById('w-ep-desc');
+  if (!ep || !ep.description) { box.style.display='none'; return; }
   box.style.display = 'block';
   box.innerHTML = '<strong>S'+(ep.season_number||1)+'E'+(ep.episode_number||1)+' — '+esc(ep.title)+'</strong>'+esc(ep.description);
 }
@@ -379,51 +343,73 @@ async function onSeasonChange(val) {
 async function onEpChange(epId) {
   var sel = document.getElementById('sel-ep');
   if (sel) sel.value = epId;
-  updateEpInfo(epId);
-  var ep = _allEps.find(function(e){ return e.id === epId; });
+  showEpDesc(epId);
+  var ep = _allEps.find(function(e){return e.id===epId;});
   if (!ep) return;
   stopSave();
   var p = getProgress(epId);
   var r = (p && !p.completed) ? p.position : 0;
-  currentPlayCtx = { type: 'episode', id: epId };
+  currentPlayCtx = { type:'episode', id:epId };
   await buildPlayer(ep.video_url, r);
   if (currentUser) startSave(epId, false);
 }
 
-/* ── OMDB ── */
-function fetchOmdb(title, year, cb) {
-  // OMDB API — clé publique gratuite (demo)
+/* ════════ OMDB + traduction FR ════════ */
+function fetchMeta(title, year, type, cb) {
   var key = 'd0707527';
-  var url = 'https://www.omdbapi.com/?apikey=' + key + '&t=' + encodeURIComponent(title) + (year ? '&y=' + year : '') + '&plot=short';
+  var url = 'https://www.omdbapi.com/?apikey='+key+'&t='+encodeURIComponent(title)+
+            (year?'&y='+year:'')+'&type='+type+'&plot=short';
   fetch(url)
-    .then(function(r){ return r.json(); })
+    .then(function(r){return r.json();})
     .then(function(d){
-      if (d.Response === 'True') {
-        cb({ poster: d.Poster, plot: d.Plot, year: d.Year, runtime: d.Runtime, imdbRating: d.imdbRating });
+      if (d.Response !== 'True') { cb({}); return; }
+      var meta = {
+        poster:     (d.Poster && d.Poster!=='N/A') ? d.Poster : null,
+        runtime:    (d.Runtime && d.Runtime!=='N/A') ? d.Runtime : null,
+        imdbRating: (d.imdbRating && d.imdbRating!=='N/A') ? d.imdbRating : null,
+        plot:       null,
+      };
+      // Traduire la description en français via MyMemory (gratuit, sans clé)
+      if (d.Plot && d.Plot !== 'N/A') {
+        fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(d.Plot)+'&langpair=en|fr')
+          .then(function(r){return r.json();})
+          .then(function(t){
+            if (t.responseStatus===200 && t.responseData && t.responseData.translatedText)
+              meta.plot = t.responseData.translatedText;
+            cb(meta);
+          })
+          .catch(function(){ meta.plot = d.Plot; cb(meta); });
       } else {
-        cb({});
+        cb(meta);
       }
     })
     .catch(function(){ cb({}); });
 }
 
-/* ── AUTOSAVE ── */
+/* ════════ HELPERS ════════ */
+function setImage(url) {
+  document.getElementById('w-bg').style.backgroundImage = "url('"+url+"')";
+  document.getElementById('w-poster-img').src = url;
+  document.getElementById('w-poster').style.display = 'block';
+}
+
+function scrollToPlayer() {
+  var el = document.querySelector('.w-player-section');
+  if (el) el.scrollIntoView({ behavior:'smooth' });
+}
+
+/* ════════ AUTOSAVE ════════ */
 function startSave(id, isFilm) {
   stopSave();
-  saveTimer = setInterval(function() {
-    if (currentUser && playerDuration() > 0)
+  saveTimer = setInterval(function(){
+    if (currentUser && playerDuration()>0)
       saveProgress(currentUser.id, id, isFilm, playerCurrentTime(), playerDuration());
   }, 5000);
 }
 function stopSave() {
-  if (saveTimer) { clearInterval(saveTimer); saveTimer = null; }
-  if (currentUser && currentPlayCtx && playerDuration() > 0)
-    saveProgress(currentUser.id, currentPlayCtx.id, currentPlayCtx.type === 'film', playerCurrentTime(), playerDuration());
-}
-
-function scrollToPlayer() {
-  var el = document.getElementById('watch-player-section');
-  if (el) el.scrollIntoView({ behavior: 'smooth' });
+  if (saveTimer) { clearInterval(saveTimer); saveTimer=null; }
+  if (currentUser && currentPlayCtx && playerDuration()>0)
+    saveProgress(currentUser.id, currentPlayCtx.id, currentPlayCtx.type==='film', playerCurrentTime(), playerDuration());
 }
 
 window.addEventListener('beforeunload', stopSave);
