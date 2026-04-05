@@ -215,7 +215,7 @@ function renderContinue() {
 // ── PLAY — delegates to player.js ──
 function openPlayer(url, r, html, hashSlug){buildPlayer(url,r);document.getElementById('player-info').innerHTML=html;document.getElementById('player-overlay').classList.add('open');var b=document.getElementById('nc-close-btn');if(b)b.style.display='flex';history.pushState(null,'',window.location.pathname+(hashSlug?'#lecteur-'+hashSlug:'#lecteur'));}
 
-function closePlayer(){if(!document.getElementById('player-overlay').classList.contains('open'))return;stopAutoSave();document.getElementById('player-overlay').classList.remove('open');var b=document.getElementById('nc-close-btn');if(b)b.style.display='none';playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;if(window.location.hash)history.pushState(null,'',window.location.pathname);renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
+function closePlayer(){if(!document.getElementById('player-overlay').classList.contains('open'))return;stopAutoSave();document.getElementById('player-overlay').classList.remove('open');var b=document.getElementById('nc-close-btn');if(b)b.style.display='none';playerDispose();document.getElementById('player-wrap').innerHTML='';currentPlayCtx=null;renderRow('row-films',films.slice(0,10),'film');renderRow('row-series',series.slice(0,10),'series');renderContinue();initLazyImages();}
 function updateProg(){if(!vidEl||isNaN(vidEl.duration))return;var p=(vidEl.currentTime/vidEl.duration)*100;var pf=document.getElementById('pfill');if(pf)pf.style.width=p+'%';var td=document.getElementById('tdisp');if(td)td.textContent=fmt(vidEl.currentTime)+' / '+fmt(vidEl.duration);}
 function togglePlay(){if(vidEl)vidEl.paused?vidEl.play():vidEl.pause();}
 function skip(s){if(vidEl)vidEl.currentTime+=s;}
@@ -290,11 +290,11 @@ function refreshDots(s){for(var i=0;i<GLEN;i++){var el=document.getElementById('
 async function checkAdminCode(){var h=await sha256(gbuf);if(h===CORRECT_HASH){closeGate();window.location.href='admin.html';}else{refreshDots('err');setTimeout(function(){gbuf='';refreshDots();},700);}}
 
 /* Fermer via popstate — fonctionne avec le bouton retour et le hash */
-window.addEventListener('popstate', function() {
-  if (!window.location.hash) closePlayer();
+window.addEventListener('hashchange', function() {
+  if (!window.location.hash) { window.location.href = window.location.pathname; }
 });
 var _ncCloseBtn = document.getElementById('nc-close-btn');
-if (_ncCloseBtn) _ncCloseBtn.onclick = function() { history.back(); };
+if (_ncCloseBtn) _ncCloseBtn.onclick = function() { window.location.hash = ''; };
 document.getElementById('gate-overlay').addEventListener('click',function(e){if(e.target===this)closeGate();});
 document.addEventListener('keydown',function(e){
   if(document.getElementById('gate-overlay').classList.contains('open')){if(e.key>='0'&&e.key<='9')gp(e.key);if(e.key==='Backspace'){e.preventDefault();gdel();}if(e.key==='Escape')closeGate();return;}
